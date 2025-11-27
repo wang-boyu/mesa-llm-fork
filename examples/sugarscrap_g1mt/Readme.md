@@ -10,7 +10,7 @@ This model is implemented using Mesa-LLM, unlike the original deterministic vers
 
 ## Technical Details
 
-Agents
+### Agents
 
 - `Trader (LLMAgent):` The primary actor equipped with STLTMemory and ReActReasoning.
 
@@ -22,7 +22,7 @@ Agents
 
 - `Resource (CellAgent):` A passive environmental agent that acts as a container for resources. It regenerates its current_amount by 1 unit per step up to a max_capacity.
 
-Tools
+### Tools
 
 - `move_to_best_resource:`
 
