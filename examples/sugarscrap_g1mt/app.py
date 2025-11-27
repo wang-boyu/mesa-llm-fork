@@ -40,7 +40,7 @@ model_params = {
     "width": 10,
     "height": 10,
     "reasoning": ReActReasoning,
-    "llm_model": "gemini/gemini-2.5-flash-lite",
+    "llm_model": "ollama/gemma3:1b",
     "vision": 5,
     "parallel_stepping": True,
 }
