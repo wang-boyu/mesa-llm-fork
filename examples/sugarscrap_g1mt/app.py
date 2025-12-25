@@ -42,7 +42,7 @@ model_params = {
     "reasoning": ReActReasoning,
     "llm_model": "gemini/gemini-2.5-flash",
     "vision": 5,
-    "parallel_stepping": True,
+    "parallel_stepping": False,
 }
 
 model = SugarScapeModel(
@@ -58,31 +58,38 @@ model = SugarScapeModel(
 )
 
 
-def trader_portrayal(agent):
+def agent_potrayal(agent):
     if agent is None:
         return
 
     portrayal = {
         "shape": "circle",
-        "Filled": "true",
-        "r": 0.5,
-        "Layer": 1,
-        "text_color": "black",
+        "filled": True,
+        "size": 20,
+        "layer": 1,
     }
 
     if isinstance(agent, Trader):
-        portrayal["Color"] = "red"
-        portrayal["r"] = 0.8
+        portrayal["color"] = "black"
+        portrayal["size"] = 50
         portrayal["text"] = f"S:{agent.sugar} Sp:{agent.spice}"
 
     elif isinstance(agent, Resource):
-        portrayal["Color"] = "green"
-        portrayal["r"] = 0.4
-        portrayal["Layer"] = 0
+        portrayal["layer"] = 0
+        color = "green"
+        if hasattr(agent, "type"):
+            if agent.type == "sugar":
+                color = "blue"
+            elif agent.type == "spice":
+                color = "red"
+
+        portrayal["color"] = color
+        portrayal["size"] = 15
+
         if agent.current_amount > 0:
-            portrayal["alpha"] = agent.current_amount / agent.max_capacity
+            portrayal["opacity"] = agent.current_amount / agent.max_capacity
         else:
-            portrayal["Color"] = "white"
+            portrayal["color"] = "white"
 
     return portrayal
 
@@ -93,9 +100,13 @@ def post_process(ax):
     ax.set_yticks([])
     ax.get_figure().set_size_inches(10, 10)
 
+    ax.text(0, 10.5, "● Trader (Black)", color="black", fontsize=10, fontweight="bold")
+    ax.text(4, 10.5, "● Sugar (Blue)", color="blue", fontsize=10, fontweight="bold")
+    ax.text(8, 10.5, "● Spice (Red)", color="red", fontsize=10, fontweight="bold")
+
 
 space_component = make_space_component(
-    trader_portrayal, post_process=post_process, draw_grid=False
+    agent_potrayal, post_process=post_process, draw_grid=False
 )
 
 chart_component = make_plot_component({"Total_Sugar": "blue", "Total_Spice": "red"})

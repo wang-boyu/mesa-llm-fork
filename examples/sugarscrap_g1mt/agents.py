@@ -1,5 +1,3 @@
-from enum import Enum
-
 import mesa
 
 from mesa_llm.llm_agent import LLMAgent
@@ -8,12 +6,6 @@ from mesa_llm.tools.tool_manager import ToolManager
 
 trader_tool_manager = ToolManager()
 resource_tool_manager = ToolManager()
-
-
-class TraderState(Enum):
-    Total_Spice = 4
-    Total_Sugar = 6
-    Total_Count = 10
 
 
 class Trader(LLMAgent, mesa.discrete_space.CellAgent):

@@ -15,16 +15,23 @@ if TYPE_CHECKING:
 def move_to_best_resource(agent: "LLMAgent") -> str:
     """
     Move the agent to the best resource cell within its vision range.
-
         Args:
             agent: Provided automatically
-
         Returns:
             A string confirming the new position of the agent.
     """
 
-    best_cell = None
-    best_amount = -1
+    def calculate_potential_welfare(sugar_if_moved, spice_if_moved):
+        m_total = agent.metabolism_sugar + agent.metabolism_spice
+        w_sugar = agent.metabolism_sugar / m_total
+        w_spice = agent.metabolism_spice / m_total
+
+        return (sugar_if_moved**w_sugar) * (spice_if_moved**w_spice)
+
+    best_cell = agent.pos
+
+    current_welfare = calculate_potential_welfare(agent.sugar, agent.spice)
+    max_welfare = current_welfare
 
     x, y = agent.pos
     vision = agent.vision
@@ -32,14 +39,29 @@ def move_to_best_resource(agent: "LLMAgent") -> str:
     for dx in range(-vision, vision + 1):
         for dy in range(-vision, vision + 1):
             nx, ny = x + dx, y + dy
+
             if not agent.model.grid.out_of_bounds((nx, ny)):
                 cell_contents = agent.model.grid.get_cell_list_contents((nx, ny))
-                for obj in cell_contents:
-                    if isinstance(obj, Resource) and obj.current_amount > best_amount:
-                        best_amount = obj.current_amount
-                        best_cell = (nx, ny)
 
-    if best_cell:
+                potential_sugar = agent.sugar
+                potential_spice = agent.spice
+
+                for obj in cell_contents:
+                    if isinstance(obj, Resource):
+                        if obj.type == "sugar":
+                            potential_sugar += obj.current_amount
+                        elif obj.type == "spice":
+                            potential_spice += obj.current_amount
+
+                welfare_here = calculate_potential_welfare(
+                    potential_sugar, potential_spice
+                )
+
+                if welfare_here > max_welfare:
+                    max_welfare = welfare_here
+                    best_cell = (nx, ny)
+
+    if best_cell != agent.pos:
         agent.model.grid.move_agent(agent, best_cell)
 
         harvested_sugar = 0
@@ -48,21 +70,27 @@ def move_to_best_resource(agent: "LLMAgent") -> str:
         cell_contents = agent.model.grid.get_cell_list_contents(best_cell)
         for obj in cell_contents:
             if isinstance(obj, Resource):
+                amount = obj.current_amount
                 if obj.type == "sugar":
-                    harvested_sugar = obj.current_amount
-                    obj.current_amount = 0  # Harvest all available resource
+                    harvested_sugar += amount
                 elif obj.type == "spice":
-                    harvested_spice = obj.current_amount
-                    obj.current_amount = 0  # Harvest all available resource
+                    harvested_spice += amount
+                obj.current_amount = 0
 
         agent.sugar += harvested_sugar
         agent.spice += harvested_spice
         agent.model.total_sugar_harvested += harvested_sugar
         agent.model.total_spice_harvested += harvested_spice
 
-        return f"agent {agent.unique_id} moved to {best_cell}. and harvested {harvested_sugar} and {harvested_spice} resources."
-    else:
-        return f"agent {agent.unique_id} found no resources to move to."
+        return (
+            f"Agent {agent.unique_id} moved to {best_cell} to maximize welfare. "
+            f"Harvested {harvested_sugar} sugar and {harvested_spice} spice. "
+            f"New Welfare: {max_welfare:.2f}"
+        )
+
+    return (
+        f"Agent {agent.unique_id} stayed put as no better welfare options were found."
+    )
 
 
 @tool(tool_manager=trader_tool_manager)
