@@ -92,6 +92,38 @@ class EpisodicMemory(Memory):
         formatted_response = json.loads(rsp.choices[0].message.content)
         return formatted_response["grade"]
 
+    async def agrade_event_importance(self, type: str, content: dict) -> float:
+        """
+        Asynchronous version of grade_event_importance
+        """
+        if len(self.memory_entries) in range(5):
+            previous_entries = "previous memory entries:\n\n".join(
+                [str(entry) for entry in self.memory_entries]
+            )
+        elif len(self.memory_entries) > 5:
+            previous_entries = "previous memory entries:\n\n".join(
+                [str(entry) for entry in self.memory_entries[-5:]]
+            )
+        else:
+            previous_entries = "No previous memory entries"
+
+        prompt = f"""
+            grade the importance of the following event on a scale from 1 to 5:
+            {type}: {content}
+            ------------------------------
+            {previous_entries}
+            """
+
+        self.llm.system_prompt = self.system_prompt
+
+        rsp = await self.agent.llm.agenerate(
+            prompt=prompt,
+            response_format=EventGrade,
+        )
+
+        formatted_response = json.loads(rsp.choices[0].message.content)
+        return formatted_response["grade"]
+
     def retrieve_top_k_entries(self, k: int) -> list[MemoryEntry]:
         """
         Retrieve the top k entries based on the importance and recency
@@ -110,6 +142,13 @@ class EpisodicMemory(Memory):
         """
         content["importance"] = self.grade_event_importance(type, content)
 
+        super().add_to_memory(type, content)
+
+    async def aadd_to_memory(self, type: str, content: dict):
+        """
+        Async version of add_to_memory
+        """
+        content["importance"] = await self.agrade_event_importance(type, content)
         super().add_to_memory(type, content)
 
     def get_prompt_ready(self) -> str:
@@ -131,6 +170,15 @@ class EpisodicMemory(Memory):
                 if "message" in entry.content
             ]
         )
+
+    async def aprocess_step(self, pre_step: bool = False):
+        """
+        Asynchronous version of process_step
+        """
+        if pre_step:
+            await self.aadd_to_memory(type="observation", content=self.step_content)
+            self.step_content = {}
+            return
 
     def process_step(self, pre_step: bool = False):
         """
