@@ -1,4 +1,5 @@
 import asyncio
+import os
 import time
 import unittest
 from unittest.mock import MagicMock, patch
@@ -6,9 +7,8 @@ from unittest.mock import MagicMock, patch
 from mesa_llm.llm_agent import LLMAgent
 from mesa_llm.parallel_stepping import step_agents_parallel
 from mesa_llm.reasoning.reasoning import Reasoning
-import os
-os.environ["OPENAI_API_KEY"] = "test"
 
+os.environ["OPENAI_API_KEY"] = "test"
 
 
 class MockModel:
@@ -20,7 +20,6 @@ class MockModel:
         self.agents.append(agent)
 
 
-
 class MockReasoning(Reasoning):
     def plan(self, prompt, obs=None, ttl=1, selected_tools=None):
         return MagicMock()
@@ -30,7 +29,6 @@ class MockReasoning(Reasoning):
 
 
 class TestAsyncMemoryFix(unittest.IsolatedAsyncioTestCase):
-
     @patch("mesa_llm.module_llm.ModuleLLM.agenerate")
     async def test_parallel_memory_consolidation(self, mock_agenerate):
         """

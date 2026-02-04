@@ -119,11 +119,10 @@ class Memory(ABC):
 
         /!\ If you consider that you do not need this function, you can write "pass" in its implementation.
         """
-    
+
     # Async Function implemented as a wrapper to the sync process_step()
-    async def aprocess_step(self,pre_step:bool = False):
+    async def aprocess_step(self, pre_step: bool = False):
         return self.process_step(pre_step)
-    
 
     def add_to_memory(self, type: str, content: dict):
         """
@@ -140,6 +139,6 @@ class Memory(ABC):
         else:
             self.step_content[type] = content
 
-    #Async Function wrapper for add_to_memory()
-    async def aadd_to_memory(self, type:str, content:dict):
-        return self.add_to_memory(type,content) 
+    # Async Function wrapper for add_to_memory()
+    async def aadd_to_memory(self, type: str, content: dict):
+        return self.add_to_memory(type, content)

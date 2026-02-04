@@ -75,7 +75,6 @@ class LongTermMemory(Memory):
 
         self.long_term_memory = await self.llm.agenerate(prompt)
 
-
     def process_step(self, pre_step: bool = False):
         """
         Process the step of the agent:
@@ -84,9 +83,9 @@ class LongTermMemory(Memory):
         """
         if pre_step:
             new_entry = MemoryEntry(
-            agent=self.agent,
-            content=self.step_content,
-            step=None,
+                agent=self.agent,
+                content=self.step_content,
+                step=None,
             )
             self.buffer = new_entry
             self.step_content = {}
@@ -105,7 +104,7 @@ class LongTermMemory(Memory):
 
         if self.display and self.buffer:
             self.buffer.display()
-        
+
     async def aprocess_step(self, pre_step: bool = False):
         """
         Asynchronous version of process_step (non-blocking)

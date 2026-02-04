@@ -67,7 +67,7 @@ class STLTMemory(Memory):
 
         self.llm.system_prompt = self.system_prompt
 
-    #Prompt builder function to reduce redundancy
+    # Prompt builder function to reduce redundancy
     def _build_consolidation_prompt(self) -> str:
         return f"""
             Short term memory:
@@ -82,15 +82,15 @@ class STLTMemory(Memory):
         """
         prompt = self._build_consolidation_prompt()
         self.long_term_memory = self.llm.generate(prompt)
-    
+
     async def _aupdate_long_term_memory(self):
         """
         Async Function to update long term memory
         """
-        prompt=self._build_consolidation_prompt()
+        prompt = self._build_consolidation_prompt()
         self.long_term_memory = await self.llm.agenerate(prompt)
 
-    def _process_step_core(self, pre_step:bool):
+    def _process_step_core(self, pre_step: bool):
         """
         Shared core logic for process_step and aprocess_step
         Update short-term memory and decide if consolidation is needed.
@@ -113,18 +113,18 @@ class STLTMemory(Memory):
         pre_step_entry = self.short_term_memory.pop()
         self.step_content.update(pre_step_entry.content)
         new_entry = MemoryEntry(
-                agent=self.agent,
-                content=self.step_content,
-                step=self.agent.model.steps,)
-            
+            agent=self.agent,
+            content=self.step_content,
+            step=self.agent.model.steps,
+        )
 
         self.short_term_memory.append(new_entry)
         self.step_content = {}
-        
+
         should_consolidate = False
         if (
             len(self.short_term_memory)
-            >self.capacity + (self.consolidation_capacity or 0) 
+            > self.capacity + (self.consolidation_capacity or 0)
             and self.consolidation_capacity
         ):
             self.short_term_memory.popleft()
@@ -133,8 +133,7 @@ class STLTMemory(Memory):
         elif len(self.short_term_memory) > self.capacity:
             self.short_term_memory.popleft()
 
-        return new_entry,should_consolidate
-
+        return new_entry, should_consolidate
 
     def process_step(self, pre_step: bool = False):
         """
@@ -144,11 +143,11 @@ class STLTMemory(Memory):
 
         if should_consolidate:
             self._update_long_term_memory()
-    
+
         if new_entry and self.display:
             new_entry.display()
-    
-    async def aprocess_step(self, pre_step:bool = False):
+
+    async def aprocess_step(self, pre_step: bool = False):
         """
         Async memory step handler (non-blocking consolidation)
         """
@@ -156,10 +155,9 @@ class STLTMemory(Memory):
 
         if should_consolidate:
             await self._aupdate_long_term_memory()
-    
+
         if new_entry and self.display:
             new_entry.display()
-        
 
     def format_long_term(self) -> str:
         """
