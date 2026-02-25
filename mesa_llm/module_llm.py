@@ -44,6 +44,13 @@ class ModuleLLM:
         self.api_base = api_base
         self.llm_model = llm_model
         self.system_prompt = system_prompt
+
+        if "/" not in llm_model:
+            raise ValueError(
+                f"Invalid model format '{llm_model}'. "
+                "Expected '{provider}/{model}', e.g. 'openai/gpt-4o'."
+            )
+
         provider = self.llm_model.split("/")[0].upper()
 
         if provider in ["OLLAMA", "OLLAMA_CHAT"]:
