@@ -52,17 +52,17 @@ class TestModuleLLM:
         with patch.dict(os.environ, {}, clear=True), pytest.raises(ValueError):
             ModuleLLM(llm_model="openai/gpt-4o")
 
-    def test_get_messages(self):
-        # Test get_messages with string prompt
+    def test_build_messages(self):
+        # Test _build_messages with string prompt
         llm = ModuleLLM(llm_model="openai/gpt-4o")
-        messages = llm.get_messages("Hello, how are you?")
+        messages = llm._build_messages("Hello, how are you?")
         assert messages == [
             {"role": "system", "content": ""},
             {"role": "user", "content": "Hello, how are you?"},
         ]
 
-        # Test get_messages with list of prompts
-        messages = llm.get_messages(
+        # Test _build_messages with list of prompts
+        messages = llm._build_messages(
             ["Hello, how are you?", "What is the weather in Tokyo?"]
         )
         assert messages == [
@@ -71,18 +71,18 @@ class TestModuleLLM:
             {"role": "user", "content": "What is the weather in Tokyo?"},
         ]
 
-        # Test get_messages with system prompt
+        # Test _build_messages with system prompt
         llm = ModuleLLM(
             llm_model="openai/gpt-4o", system_prompt="You are a helpful assistant."
         )
-        messages = llm.get_messages("Hello, how are you?")
+        messages = llm._build_messages("Hello, how are you?")
         assert messages == [
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": "Hello, how are you?"},
         ]
 
-        # Test get_messages with system prompt and list of prompts
-        messages = llm.get_messages(
+        # Test _build_messages with system prompt and list of prompts
+        messages = llm._build_messages(
             ["Hello, how are you?", "What is the weather in Tokyo?"]
         )
         assert messages == [
@@ -91,9 +91,9 @@ class TestModuleLLM:
             {"role": "user", "content": "What is the weather in Tokyo?"},
         ]
 
-        # Test get_messages no system prompt and no prompt
+        # Test _build_messages no system prompt and no prompt
         llm = ModuleLLM(llm_model="openai/gpt-4o")
-        messages = llm.get_messages(prompt=None)
+        messages = llm._build_messages(prompt=None)
         assert messages == [{"role": "system", "content": ""}]
 
     def test_generate(self, monkeypatch):

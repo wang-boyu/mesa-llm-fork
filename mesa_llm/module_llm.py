@@ -65,12 +65,12 @@ class ModuleLLM:
                 f"[yellow][Warning]: {self.llm_model} does not support function calling. This model may not be able to use tools. Please check the model documentation at https://docs.litellm.ai/docs/providers for more information.[/yellow]"
             )
 
-    def get_messages(self, prompt: str | list[str]) -> list[dict]:
+    def _build_messages(self, prompt: str | list[str] | None = None) -> list[dict]:
         """
         Format the prompt messages for the LLM of the form : {"role": ..., "content": ...}
 
         Args:
-            prompt: The prompt to generate a response for
+            prompt: The prompt to generate a response for (str, list of strings, or None)
 
         Returns:
             The messages for the LLM
@@ -97,7 +97,7 @@ class ModuleLLM:
     )
     def generate(
         self,
-        prompt: str | list[str],
+        prompt: str | list[str] | None = None,
         tool_schema: list[dict] | None = None,
         tool_choice: str = "auto",
         response_format: dict | object | None = None,
@@ -106,7 +106,7 @@ class ModuleLLM:
         Generate a response from the LLM using litellm based on the prompt
 
         Args:
-            prompt: The prompt to generate a response for
+            prompt: The prompt to generate a response for (str, list of strings, or None)
             tool_schema: The schema of the tools to use
             tool_choice: The choice of tool to use
             response_format: The format of the response
@@ -115,7 +115,7 @@ class ModuleLLM:
             The response from the LLM
         """
 
-        messages = self.get_messages(prompt)
+        messages = self._build_messages(prompt)
 
         # If api_base is provided, use it to override the default API base
         if self.api_base:
@@ -142,7 +142,7 @@ class ModuleLLM:
 
     async def agenerate(
         self,
-        prompt: str | list[str],
+        prompt: str | list[str] | None = None,
         tool_schema: list[dict] | None = None,
         tool_choice: str = "auto",
         response_format: dict | object | None = None,
@@ -150,7 +150,7 @@ class ModuleLLM:
         """
         Asynchronous version of generate() method for parallel LLM calls.
         """
-        messages = self.get_messages(prompt)
+        messages = self._build_messages(prompt)
         async for attempt in AsyncRetrying(
             wait=wait_exponential(multiplier=1, min=1, max=60),
             retry=retry_if_exception_type(RETRYABLE_EXCEPTIONS),
