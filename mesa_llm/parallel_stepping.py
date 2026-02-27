@@ -106,7 +106,6 @@ def _agentset_do_async(self, method: str, *args, **kwargs):
     Call the given async method on all agents in the set in parallel.
     Usage: await agents.do_async("async_function")
     """
-    print(f"Running async method '{method}' on {len(self)} agents")
 
     async def _run():
         tasks = []
