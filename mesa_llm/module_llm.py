@@ -117,26 +117,17 @@ class ModuleLLM:
 
         messages = self._build_messages(prompt)
 
-        # If api_base is provided, use it to override the default API base
+        completion_kwargs = {
+            "model": self.llm_model,
+            "messages": messages,
+            "tools": tool_schema,
+            "tool_choice": tool_choice if tool_schema else None,
+            "response_format": response_format,
+        }
         if self.api_base:
-            response = completion(
-                model=self.llm_model,
-                messages=messages,
-                api_base=self.api_base,
-                tools=tool_schema,
-                tool_choice=tool_choice if tool_schema else None,
-                response_format=response_format,
-            )
+            completion_kwargs["api_base"] = self.api_base
 
-        # Otherwise, use the default API base
-        else:
-            response = completion(
-                model=self.llm_model,
-                messages=messages,
-                tools=tool_schema,
-                tool_choice=tool_choice if tool_schema else None,
-                response_format=response_format,
-            )
+        response = completion(**completion_kwargs)
 
         return response
 
@@ -157,11 +148,15 @@ class ModuleLLM:
             reraise=True,
         ):
             with attempt:
-                response = await acompletion(
-                    model=self.llm_model,
-                    messages=messages,
-                    tools=tool_schema,
-                    tool_choice=tool_choice if tool_schema else None,
-                    response_format=response_format,
-                )
+                completion_kwargs = {
+                    "model": self.llm_model,
+                    "messages": messages,
+                    "tools": tool_schema,
+                    "tool_choice": tool_choice if tool_schema else None,
+                    "response_format": response_format,
+                }
+                if self.api_base:
+                    completion_kwargs["api_base"] = self.api_base
+
+                response = await acompletion(**completion_kwargs)
         return response
