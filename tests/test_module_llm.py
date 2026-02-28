@@ -28,6 +28,11 @@ def mock_api_key():
 class TestModuleLLM:
     """Test ModuleLLM class"""
 
+    def test_missing_provider_prefix(self):
+        """ModuleLLM should raise ValueError when llm_model has no provider prefix."""
+        with pytest.raises(ValueError, match="Invalid model format"):
+            ModuleLLM(llm_model="gpt-4o")
+
     def test_module_llm_initialization(self, mock_api_key):
         # Test initialization with default values
         llm = ModuleLLM(llm_model="openai/gpt-4o")
