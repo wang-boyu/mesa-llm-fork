@@ -83,10 +83,7 @@ def record_model(
         def _auto_save():
             try:
                 # Avoid creating multiple identical files if already saved manually
-                # Use getattr so that a replaced/mock recorder without an `events`
-                # attribute does not raise AttributeError here.
-                recorder = getattr(self, "recorder", None)
-                if recorder is not None and getattr(recorder, "events", None):
+                if hasattr(self, "recorder") and self.recorder.events:
                     self.save_recording()
             except Exception as exc:  # pragma: no cover - defensive
                 print(f"[SimulationRecorder] Auto-save failed: {exc}")
