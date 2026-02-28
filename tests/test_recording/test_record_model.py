@@ -126,6 +126,7 @@ class TestRecordModelDecorator:
 
         # Mock the recorder to track calls
         model.recorder = Mock(spec=SimulationRecorder)
+        model.recorder.events = []  # instance attr not in class spec; set explicitly
 
         # Call step
         model.step()
