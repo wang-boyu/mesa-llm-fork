@@ -19,12 +19,6 @@ async def _dummy_acompletion(**kwargs):
     return _DummyResponse({"choices": [{"message": {"content": "ok"}}]})
 
 
-@pytest.fixture
-def mock_api_key():
-    with patch.dict(os.environ, {"OPENAI_API_KEY": "test_key"}, clear=True):
-        yield
-
-
 class TestModuleLLM:
     """Test ModuleLLM class"""
 
@@ -33,10 +27,10 @@ class TestModuleLLM:
         with pytest.raises(ValueError, match="Invalid model format"):
             ModuleLLM(llm_model="gpt-4o")
 
-    def test_module_llm_initialization(self, mock_api_key):
+    def test_module_llm_initialization(self, mock_environment):
         # Test initialization with default values
         llm = ModuleLLM(llm_model="openai/gpt-4o")
-        assert llm.api_key == "test_key"
+        assert llm.api_key == "test_openai_key"
         assert llm.api_base is None
         assert llm.llm_model == "openai/gpt-4o"
         assert llm.system_prompt is None

@@ -14,8 +14,6 @@ from mesa_llm.reasoning.react import ReActReasoning
 
 
 def test_apply_plan_adds_to_memory(monkeypatch):
-    monkeypatch.setenv("GEMINI_API_KEY", "dummy")
-
     class DummyModel(Model):
         def __init__(self):
             super().__init__(seed=42)
@@ -70,8 +68,6 @@ def test_apply_plan_adds_to_memory(monkeypatch):
 
 
 def test_generate_obs_with_one_neighbor(monkeypatch):
-    monkeypatch.setenv("GEMINI_API_KEY", "dummy")
-
     class DummyModel(Model):
         def __init__(self):
             super().__init__(seed=45)
@@ -128,8 +124,6 @@ def test_generate_obs_with_one_neighbor(monkeypatch):
 
 
 def test_send_message_updates_both_agents_memory(monkeypatch):
-    monkeypatch.setenv("GEMINI_API_KEY", "dummy")
-
     class DummyModel(Model):
         def __init__(self):
             super().__init__(seed=45)
@@ -187,8 +181,6 @@ def test_send_message_updates_both_agents_memory(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_aapply_plan_adds_to_memory(monkeypatch):
-    monkeypatch.setenv("GEMINI_API_KEY", "dummy")
-
     class DummyModel(Model):
         def __init__(self):
             super().__init__(seed=42)
@@ -236,8 +228,6 @@ async def test_aapply_plan_adds_to_memory(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_agenerate_obs_with_one_neighbor(monkeypatch):
-    monkeypatch.setenv("GEMINI_API_KEY", "dummy")
-
     class DummyModel(Model):
         def __init__(self):
             super().__init__(seed=45)
@@ -285,8 +275,6 @@ async def test_agenerate_obs_with_one_neighbor(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_async_wrapper_calls_pre_and_post(monkeypatch):
-    monkeypatch.setenv("GEMINI_API_KEY", "dummy")
-
     class CustomAgent(LLMAgent):
         async def astep(self):
             self.user_called = True
@@ -350,7 +338,6 @@ def _make_agent(model, vision=0, internal_state=None):
 
 def test_safer_cell_access_agent_with_cell_no_pos(monkeypatch):
     """Agent location falls back to cell.coordinate when pos=None."""
-    monkeypatch.setenv("GEMINI_API_KEY", "dummy")
     model = Model(seed=42)
     agent = _make_agent(model)
     agent.pos = None
@@ -364,7 +351,6 @@ def test_safer_cell_access_agent_with_cell_no_pos(monkeypatch):
 
 def test_safer_cell_access_agent_without_cell_or_pos(monkeypatch):
     """Agent location returns None gracefully when neither pos nor cell exists."""
-    monkeypatch.setenv("GEMINI_API_KEY", "dummy")
     model = Model(seed=42)
     agent = _make_agent(model)
     agent.pos = None
@@ -379,7 +365,6 @@ def test_safer_cell_access_agent_without_cell_or_pos(monkeypatch):
 
 def test_safer_cell_access_neighbor_with_cell_no_pos(monkeypatch):
     """Neighbor position uses cell.coordinate when neighbor.pos=None."""
-    monkeypatch.setenv("GEMINI_API_KEY", "dummy")
 
     class GridModel(Model):
         def __init__(self):
@@ -413,7 +398,6 @@ def test_safer_cell_access_neighbor_with_cell_no_pos(monkeypatch):
 
 def test_safer_cell_access_neighbor_without_cell_or_pos(monkeypatch):
     """Neighbor position returns None when neighbor has neither pos nor cell."""
-    monkeypatch.setenv("GEMINI_API_KEY", "dummy")
 
     class GridModel(Model):
         def __init__(self):
@@ -448,7 +432,6 @@ def test_safer_cell_access_neighbor_without_cell_or_pos(monkeypatch):
 
 def test_generate_obs_with_continuous_space(monkeypatch):
     """Agents within vision radius are included; those outside are not."""
-    monkeypatch.setenv("GEMINI_API_KEY", "dummy")
 
     class ContModel(Model):
         def __init__(self):
@@ -485,7 +468,6 @@ def test_generate_obs_with_continuous_space(monkeypatch):
 
 def test_generate_obs_vision_all_agents(monkeypatch):
     """vision=-1 returns all other agents regardless of position."""
-    monkeypatch.setenv("GEMINI_API_KEY", "dummy")
 
     class GridModel(Model):
         def __init__(self):
@@ -519,7 +501,6 @@ def test_generate_obs_vision_all_agents(monkeypatch):
 
 def test_generate_obs_no_grid_with_vision(monkeypatch):
     """When the model has no grid/space, generate_obs falls back to empty neighbors."""
-    monkeypatch.setenv("GEMINI_API_KEY", "dummy")
     model = Model(seed=42)  # no grid, no space
     agents = LLMAgent.create_agents(
         model,
@@ -549,7 +530,6 @@ def test_generate_obs_standard_grid_with_vision_radius(monkeypatch):
     - The observation includes nearby agents in local_state.
     - The SingleGrid neighbor lookup branch is executed.
     """
-    monkeypatch.setenv("GEMINI_API_KEY", "dummy")
 
     class GridModel(Model):
         def __init__(self):
@@ -585,7 +565,6 @@ def test_generate_obs_orthogonal_grid_branches(monkeypatch):
     Covers Orthogonal grid-specific branches including
     cell-based lookup and fallback behavior.
     """
-    monkeypatch.setenv("GEMINI_API_KEY", "dummy")
 
     class OrthoModel(Model):
         def __init__(self):

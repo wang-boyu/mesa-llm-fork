@@ -1,8 +1,6 @@
 from typing import TYPE_CHECKING
 from unittest.mock import Mock
 
-from memory_utils import mock_agent
-
 from mesa_llm.memory.memory import Memory, MemoryEntry
 from mesa_llm.module_llm import ModuleLLM
 
@@ -76,6 +74,7 @@ class TestMemoryParent:
         assert not hasattr(memory, "llm")
 
     def test_add_to_memory(self):
+        mock_agent = Mock()
         memory = MemoryMock(agent=mock_agent)
         # Test basic addition with observation
         memory.add_to_memory("observation", {"step": 1, "content": "Test content"})

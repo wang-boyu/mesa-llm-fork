@@ -18,20 +18,13 @@ DEFAULT_AGENT_CONFIG = {
 }
 
 
-class MockCell:
-    """Mock cell with coordinate attribute"""
-
-    def __init__(self, coordinate):
-        self.coordinate = coordinate
-
-
 @pytest.fixture(autouse=True)
 def mock_environment():
     """Ensure tests don't depend on real environment variables"""
     with patch.dict(
         os.environ,
         {
-            "GEMINI_API_KEY": "dummy",
+            "GEMINI_API_KEY": "test_gemini_key",
             "PROVIDER_API_KEY": "test_key",
             "OPENAI_API_KEY": "test_openai_key",
         },

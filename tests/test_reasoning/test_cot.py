@@ -49,9 +49,6 @@ class TestCoTReasoning:
                 super().__init__(seed=45)
                 self.grid = MultiGrid(3, 3, torus=False)
 
-        # Monkeypatch a dummy API key so ModuleLLM does not fail
-        monkeypatch.setenv("GEMINI_API_KEY", "dummy")
-
         # Create an LLMAgent with CoTReasoning
         model = DummyModel()
         agent = LLMAgent(

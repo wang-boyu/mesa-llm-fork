@@ -8,37 +8,19 @@ from mesa_llm.memory.episodic_memory import EpisodicMemory
 from mesa_llm.memory.memory import MemoryEntry
 
 
-@pytest.fixture
-def mock_agent():
-    agent = MagicMock(name="MockLLMAgent")
-
-    # Create a MagicMock for the LLM's response
-    mock_response = MagicMock()
-
-    # This line *defines* the full nested path on the mock
-    mock_response.choices[0].message.content = json.dumps({"grade": 3})
-
-    # Set this as the return value
-    agent.llm.generate.return_value = mock_response
-
-    agent.model.steps = 100
-    agent.model.events = []
-    return agent
-
-
 class TestEpisodicMemory:
     """Core functionality test"""
 
-    def test_memory_init(self, mock_agent):
+    def test_memory_init(self, episodic_mock_agent):
         """Test EpisodicMemory class initialization with defaults and custom values"""
         memory = EpisodicMemory(
-            agent=mock_agent,
+            agent=episodic_mock_agent,
             max_capacity=10,
             considered_entries=5,
             llm_model="provider/test_model",
         )
 
-        assert memory.agent == mock_agent
+        assert memory.agent == episodic_mock_agent
         assert memory.max_capacity == 10
         assert memory.considered_entries == 5
         assert isinstance(memory.memory_entries, deque)
@@ -47,9 +29,11 @@ class TestEpisodicMemory:
         """FYI: The above line may not always work; use the one below if needed."""
         # assert isinstance(memory.system_prompt,str), memory.system_prompt.strip() != ""
 
-    def test_add_memory_entry(self, mock_agent):
+    def test_add_memory_entry(self, episodic_mock_agent):
         """Test adding memories to Episodic memory"""
-        memory = EpisodicMemory(agent=mock_agent, llm_model="provider/test_model")
+        memory = EpisodicMemory(
+            agent=episodic_mock_agent, llm_model="provider/test_model"
+        )
 
         # Test basic addition with observation
         memory.add_to_memory("observation", {"step": 1, "content": "Test content"})
@@ -63,14 +47,16 @@ class TestEpisodicMemory:
         # Should be empty step_content initially
         assert memory.step_content != {}
 
-    def test_grade_event_importance(self, mock_agent):
+    def test_grade_event_importance(self, episodic_mock_agent):
         """Test grading event importance"""
-        memory = EpisodicMemory(agent=mock_agent, llm_model="provider/test_model")
+        memory = EpisodicMemory(
+            agent=episodic_mock_agent, llm_model="provider/test_model"
+        )
 
         # 1. Set up a specific grade for this test
         mock_response = MagicMock()
         mock_response.choices[0].message.content = json.dumps({"grade": 5})
-        mock_agent.llm.generate.return_value = mock_response
+        episodic_mock_agent.llm.generate.return_value = mock_response
 
         # 2. Call the method
         grade = memory.grade_event_importance("observation", {"data": "critical info"})
@@ -79,35 +65,37 @@ class TestEpisodicMemory:
         assert grade == 5
 
         # 4. Assert the LLM was called correctly
-        mock_agent.llm.generate.assert_called_once()
+        episodic_mock_agent.llm.generate.assert_called_once()
 
         # Check that the system prompt was set on the llm object
         assert memory.llm.system_prompt == memory.system_prompt
 
-    def test_retrieve_top_k_entries(self, mock_agent):
+    def test_retrieve_top_k_entries(self, episodic_mock_agent):
         """Test the sorting logic for retrieving entries (importance - recency_penalty)."""
-        memory = EpisodicMemory(agent=mock_agent, llm_model="provider/test_model")
+        memory = EpisodicMemory(
+            agent=episodic_mock_agent, llm_model="provider/test_model"
+        )
         # Set current step
-        mock_agent.model.steps = 100
+        episodic_mock_agent.model.steps = 100
 
         # Manually add entries to bypass grading and control scores
         # score = importance - (current_step - entry_step)
 
         # score = 5 - (100 - 98) = 3
         entry_a = MemoryEntry(
-            content={"importance": 5, "id": "A"}, step=98, agent=mock_agent
+            content={"importance": 5, "id": "A"}, step=98, agent=episodic_mock_agent
         )
         # score = 1 - (100 - 99) = 0
         entry_b = MemoryEntry(
-            content={"importance": 1, "id": "B"}, step=99, agent=mock_agent
+            content={"importance": 1, "id": "B"}, step=99, agent=episodic_mock_agent
         )
         # score = 4 - (100 - 90) = -6
         entry_c = MemoryEntry(
-            content={"importance": 4, "id": "C"}, step=90, agent=mock_agent
+            content={"importance": 4, "id": "C"}, step=90, agent=episodic_mock_agent
         )
         # score = 4 - (100 - 95) = -1
         entry_d = MemoryEntry(
-            content={"importance": 4, "id": "D"}, step=95, agent=mock_agent
+            content={"importance": 4, "id": "D"}, step=95, agent=episodic_mock_agent
         )
 
         memory.memory_entries.extend([entry_a, entry_b, entry_c, entry_d])
@@ -124,7 +112,7 @@ class TestEpisodicMemory:
         # Entry C (score -6) should be omitted
         assert "C" not in [e.content["id"] for e in top_entries]
 
-    def test_process_step_pre_step(self, mock_agent):
+    def test_process_step_pre_step(self, episodic_mock_agent):
         """
         The process_step function in the episodic_memory when called with 'pre_step=True' takes whatever is already inside the step_content,
         then calls the add_to_memory function and then clears the step_content.
@@ -133,7 +121,9 @@ class TestEpisodicMemory:
             - Checks whether the add_to_memory function is called correctly when 'pre_step=True.'
             - Also performs a final check to ensure the step_content is cleared.
         """
-        memory = EpisodicMemory(agent=mock_agent, llm_model="provider/test_model")
+        memory = EpisodicMemory(
+            agent=episodic_mock_agent, llm_model="provider/test_model"
+        )
 
         # Pre-populate step_content
         memory.step_content = {"observation": {"data": "test"}}
@@ -152,14 +142,16 @@ class TestEpisodicMemory:
         assert memory.step_content == {}
 
     @pytest.mark.asyncio
-    async def test_aprocess_step_pre_step(self, mock_agent):
+    async def test_aprocess_step_pre_step(self, episodic_mock_agent):
         """
         Asynchronous version of the 'test_process_step_pre_step'
         Implements the same checks as the sync counterpart function but in an async manner.
             - checks whether aadd_to_memory function was called correctly
             - checks whether the step_content was cleared correctly at the end
         """
-        memory = EpisodicMemory(agent=mock_agent, llm_model="provider/test_model")
+        memory = EpisodicMemory(
+            agent=episodic_mock_agent, llm_model="provider/test_model"
+        )
 
         memory.step_content = {"observation": {"data": "test"}}
         memory.aadd_to_memory = AsyncMock()
@@ -175,7 +167,7 @@ class TestEpisodicMemory:
         assert memory.step_content == {}
 
     @pytest.mark.asyncio
-    async def test_async_add_memory_entry(self, mock_agent):
+    async def test_async_add_memory_entry(self, episodic_mock_agent):
         """
         The aadd_to_memory function assigns an 'importance' value to the content and then calls the add_to_memory function
 
@@ -184,7 +176,9 @@ class TestEpisodicMemory:
             - then calls the aad_to_memory function
             - checks to ensure that the step_content is not empty as the aadd_to_memory function will have added entries into it.
         """
-        memory = EpisodicMemory(agent=mock_agent, llm_model="provider/test_model")
+        memory = EpisodicMemory(
+            agent=episodic_mock_agent, llm_model="provider/test_model"
+        )
 
         mock_response = MagicMock()
         mock_response.choices = [
@@ -192,7 +186,7 @@ class TestEpisodicMemory:
         ]
 
         # Assigns the mock response
-        mock_agent.llm.agenerate = AsyncMock(return_value=mock_response)
+        episodic_mock_agent.llm.agenerate = AsyncMock(return_value=mock_response)
 
         # adds content into the memory using the async counter part of add_to_memory function
         await memory.aadd_to_memory("observation", {"content": "Test content"})
@@ -202,7 +196,7 @@ class TestEpisodicMemory:
         # checks to ensure that step content is not empty
         assert memory.step_content != {}
 
-    def test_build_grade_prompt_no_previous_entries(self, mock_agent):
+    def test_build_grade_prompt_no_previous_entries(self, episodic_mock_agent):
         """
         The _build_grade_prompt function inserts 'No previous memory entries this message if there are no entries passed to it.
 
@@ -210,7 +204,9 @@ class TestEpisodicMemory:
             - No memory entries are added before the _build_grade_prompt function call
             - So when the memory is empty we expect to see 'No previous memory entries' in the returned prompt.
         """
-        memory = EpisodicMemory(agent=mock_agent, llm_model="provider/test_model")
+        memory = EpisodicMemory(
+            agent=episodic_mock_agent, llm_model="provider/test_model"
+        )
 
         prompt = memory._build_grade_prompt("observation", {"data": "test"})
 
@@ -218,7 +214,7 @@ class TestEpisodicMemory:
         assert "No previous memory entries" in prompt
         assert "observation" in prompt
 
-    def test_get_communication_history(self, mock_agent):
+    def test_get_communication_history(self, episodic_mock_agent):
         """
         Return a formatted string of all messages stored in memory.
 
@@ -232,18 +228,20 @@ class TestEpisodicMemory:
             str: A string containing all communication messages
                 from memory, separated by new lines.
         """
-        memory = EpisodicMemory(agent=mock_agent, llm_model="provider/test_model")
+        memory = EpisodicMemory(
+            agent=episodic_mock_agent, llm_model="provider/test_model"
+        )
 
         entry_with_message = MemoryEntry(
             content={"importance": 3, "message": "Hello"},
             step=1,
-            agent=mock_agent,
+            agent=episodic_mock_agent,
         )
 
         entry_without_message = MemoryEntry(
             content={"importance": 2, "data": "No message here"},
             step=2,
-            agent=mock_agent,
+            agent=episodic_mock_agent,
         )
 
         memory.memory_entries.append(entry_with_message)
