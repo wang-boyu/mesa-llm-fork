@@ -97,6 +97,7 @@ def llm_response_factory():
     return build_llm_response
 
 
+@pytest.fixture
 def basic_model():
     """Create basic model without grid"""
     return Model(seed=42)
