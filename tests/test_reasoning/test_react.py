@@ -73,7 +73,7 @@ class TestReActReasoning:
         assert len(prompt_list) >= 1
         assert "last communication" not in prompt_list[-1]
 
-    def test_plan_with_prompt(self):
+    def test_plan_with_prompt(self, llm_response_factory):
         """Test plan method with custom prompt."""
         mock_agent = Mock()
         mock_agent.memory = Mock()
@@ -84,13 +84,11 @@ class TestReActReasoning:
         mock_agent.tool_manager = Mock()
         mock_agent.tool_manager.get_all_tools_schema.return_value = {}
 
-        # Mock the LLM response
-        mock_response = Mock()
-        mock_response.choices = [Mock()]
-        mock_response.choices[0].message.content = json.dumps(
-            {"reasoning": "Custom reasoning", "action": "custom_action"}
+        mock_agent.llm.generate.return_value = llm_response_factory(
+            content=json.dumps(
+                {"reasoning": "Custom reasoning", "action": "custom_action"}
+            )
         )
-        mock_agent.llm.generate.return_value = mock_response
 
         # Mock execute_tool_call
         mock_plan = Plan(step=1, llm_plan=Mock())
@@ -103,7 +101,7 @@ class TestReActReasoning:
         assert result == mock_plan
         reasoning.execute_tool_call.assert_called_once_with("custom_action", None)
 
-    def test_plan_with_selected_tools(self):
+    def test_plan_with_selected_tools(self, llm_response_factory):
         """Test plan method with selected tools."""
         mock_agent = Mock()
         mock_agent.step_prompt = "Default step prompt"
@@ -115,13 +113,9 @@ class TestReActReasoning:
         mock_agent.tool_manager = Mock()
         mock_agent.tool_manager.get_all_tools_schema.return_value = {}
 
-        # Mock the LLM response
-        mock_response = Mock()
-        mock_response.choices = [Mock()]
-        mock_response.choices[0].message.content = json.dumps(
-            {"reasoning": "Test reasoning", "action": "test_action"}
+        mock_agent.llm.generate.return_value = llm_response_factory(
+            content=json.dumps({"reasoning": "Test reasoning", "action": "test_action"})
         )
-        mock_agent.llm.generate.return_value = mock_response
 
         # Mock execute_tool_call
         mock_plan = Plan(step=1, llm_plan=Mock())
@@ -154,7 +148,7 @@ class TestReActReasoning:
         ):
             reasoning.plan(obs=obs)
 
-    def test_aplan_async_version(self):
+    def test_aplan_async_version(self, llm_response_factory):
         """Test aplan async method."""
         mock_agent = Mock()
         mock_agent.step_prompt = "Default step prompt"
@@ -167,13 +161,13 @@ class TestReActReasoning:
         mock_agent.tool_manager = Mock()
         mock_agent.tool_manager.get_all_tools_schema.return_value = {}
 
-        # Mock the async LLM response
-        mock_response = Mock()
-        mock_response.choices = [Mock()]
-        mock_response.choices[0].message.content = json.dumps(
-            {"reasoning": "Async reasoning", "action": "async_action"}
+        mock_agent.llm.agenerate = AsyncMock(
+            return_value=llm_response_factory(
+                content=json.dumps(
+                    {"reasoning": "Async reasoning", "action": "async_action"}
+                )
+            )
         )
-        mock_agent.llm.agenerate = AsyncMock(return_value=mock_response)
 
         # Mock aexecute_tool_call
         mock_plan = Plan(step=1, llm_plan=Mock())

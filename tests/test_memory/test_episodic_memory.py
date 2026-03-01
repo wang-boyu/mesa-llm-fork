@@ -47,16 +47,16 @@ class TestEpisodicMemory:
         # Should be empty step_content initially
         assert memory.step_content != {}
 
-    def test_grade_event_importance(self, episodic_mock_agent):
+    def test_grade_event_importance(self, episodic_mock_agent, llm_response_factory):
         """Test grading event importance"""
         memory = EpisodicMemory(
             agent=episodic_mock_agent, llm_model="provider/test_model"
         )
 
         # 1. Set up a specific grade for this test
-        mock_response = MagicMock()
-        mock_response.choices[0].message.content = json.dumps({"grade": 5})
-        episodic_mock_agent.llm.generate.return_value = mock_response
+        episodic_mock_agent.llm.generate.return_value = llm_response_factory(
+            content=json.dumps({"grade": 5})
+        )
 
         # 2. Call the method
         grade = memory.grade_event_importance("observation", {"data": "critical info"})
@@ -167,7 +167,9 @@ class TestEpisodicMemory:
         assert memory.step_content == {}
 
     @pytest.mark.asyncio
-    async def test_async_add_memory_entry(self, episodic_mock_agent):
+    async def test_async_add_memory_entry(
+        self, episodic_mock_agent, llm_response_factory
+    ):
         """
         The aadd_to_memory function assigns an 'importance' value to the content and then calls the add_to_memory function
 
@@ -180,13 +182,9 @@ class TestEpisodicMemory:
             agent=episodic_mock_agent, llm_model="provider/test_model"
         )
 
-        mock_response = MagicMock()
-        mock_response.choices = [
-            MagicMock(message=MagicMock(content=json.dumps({"grade": 3})))
-        ]
-
-        # Assigns the mock response
-        episodic_mock_agent.llm.agenerate = AsyncMock(return_value=mock_response)
+        episodic_mock_agent.llm.agenerate = AsyncMock(
+            return_value=llm_response_factory(content=json.dumps({"grade": 3}))
+        )
 
         # adds content into the memory using the async counter part of add_to_memory function
         await memory.aadd_to_memory("observation", {"content": "Test content"})

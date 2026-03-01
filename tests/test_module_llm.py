@@ -6,19 +6,6 @@ import pytest
 from mesa_llm.module_llm import ModuleLLM
 
 
-# Dummy responses to stub out external LLM calls during tests
-class _DummyResponse(dict):
-    pass
-
-
-def _dummy_completion(**kwargs):
-    return _DummyResponse({"choices": [{"message": {"content": "ok"}}]})
-
-
-async def _dummy_acompletion(**kwargs):
-    return _DummyResponse({"choices": [{"message": {"content": "ok"}}]})
-
-
 class TestModuleLLM:
     """Test ModuleLLM class"""
 
@@ -95,9 +82,10 @@ class TestModuleLLM:
         messages = llm._build_messages(prompt=None)
         assert messages == [{"role": "system", "content": ""}]
 
-    def test_generate(self, monkeypatch):
-        # Prevent network calls by stubbing litellm completion
-        monkeypatch.setattr("mesa_llm.module_llm.completion", _dummy_completion)
+    def test_generate(self, monkeypatch, llm_response_factory):
+        monkeypatch.setattr(
+            "mesa_llm.module_llm.completion", lambda **kwargs: llm_response_factory()
+        )
         # Test generate with string prompt
         llm = ModuleLLM(llm_model="openai/gpt-4o")
         response = llm.generate(prompt="Hello, how are you?")
@@ -121,8 +109,10 @@ class TestModuleLLM:
         assert response is not None
 
     @pytest.mark.asyncio
-    async def test_agenerate(self, monkeypatch):
-        # Prevent network calls by stubbing litellm acompletion
+    async def test_agenerate(self, monkeypatch, llm_response_factory):
+        async def _dummy_acompletion(**kwargs):
+            return llm_response_factory()
+
         monkeypatch.setattr("mesa_llm.module_llm.acompletion", _dummy_acompletion)
         # Test agenerate with string prompt
         llm = ModuleLLM(llm_model="openai/gpt-4o")

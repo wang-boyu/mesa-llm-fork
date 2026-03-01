@@ -9,6 +9,14 @@ from mesa_llm.reasoning.reasoning import Observation, Plan
 from mesa_llm.reasoning.rewoo import ReWOOReasoning
 
 
+def _tool_call(tool_id: str):
+    return {
+        "id": tool_id,
+        "type": "function",
+        "function": {"name": "mock_tool", "arguments": "{}"},
+    }
+
+
 class TestReWOOReasoning:
     """Test the ReWOOReasoning class."""
 
@@ -70,7 +78,7 @@ class TestReWOOReasoning:
         assert reasoning.remaining_tool_calls == 1
         mock_agent.generate_obs.assert_not_called()
 
-    def test_plan_new_plan_generation(self):
+    def test_plan_new_plan_generation(self, llm_response_factory):
         """Test plan method when generating a new plan."""
         mock_agent = Mock()
         mock_agent.step_prompt = "Default step prompt"
@@ -85,19 +93,11 @@ class TestReWOOReasoning:
         mock_agent.tool_manager = Mock()
         mock_agent.tool_manager.get_all_tools_schema.return_value = {}
 
-        # Mock the LLM response for planning
-        mock_plan_response = Mock()
-        mock_plan_response.choices = [Mock()]
-        mock_plan_response.choices[0].message.content = "Test plan content"
-
-        # Mock the LLM response for execution
-        mock_exec_response = Mock()
-        mock_exec_response.choices = [Mock()]
-        mock_exec_response.choices[0].message = Mock()
-        mock_exec_response.choices[0].message.tool_calls = [
-            Mock(),
-            Mock(),
-        ]  # 2 tool calls
+        mock_plan_response = llm_response_factory(content="Test plan content")
+        mock_exec_response = llm_response_factory(
+            content="Execution plan",
+            tool_calls=[_tool_call("call_1"), _tool_call("call_2")],
+        )
 
         mock_agent.llm.generate.side_effect = [mock_plan_response, mock_exec_response]
 
@@ -114,7 +114,7 @@ class TestReWOOReasoning:
         assert reasoning.current_obs is not None
         mock_agent.generate_obs.assert_called_once()
 
-    def test_plan_with_custom_prompt(self):
+    def test_plan_with_custom_prompt(self, llm_response_factory):
         """Test plan method with custom prompt."""
         mock_agent = Mock()
         mock_agent.generate_obs.return_value = Observation(
@@ -128,16 +128,11 @@ class TestReWOOReasoning:
         mock_agent.tool_manager = Mock()
         mock_agent.tool_manager.get_all_tools_schema.return_value = {}
 
-        # Mock the LLM response for planning
-        mock_plan_response = Mock()
-        mock_plan_response.choices = [Mock()]
-        mock_plan_response.choices[0].message.content = "Custom plan content"
-
-        # Mock the LLM response for execution
-        mock_exec_response = Mock()
-        mock_exec_response.choices = [Mock()]
-        mock_exec_response.choices[0].message = Mock()
-        mock_exec_response.choices[0].message.tool_calls = [Mock()]
+        mock_plan_response = llm_response_factory(content="Custom plan content")
+        mock_exec_response = llm_response_factory(
+            content="Execution plan",
+            tool_calls=[_tool_call("call_1")],
+        )
 
         mock_agent.llm.generate.side_effect = [mock_plan_response, mock_exec_response]
 
@@ -151,7 +146,7 @@ class TestReWOOReasoning:
         assert isinstance(result, Plan)
         assert reasoning.remaining_tool_calls == 1
 
-    def test_plan_with_selected_tools(self):
+    def test_plan_with_selected_tools(self, llm_response_factory):
         """Test plan method with selected tools."""
         mock_agent = Mock()
         mock_agent.step_prompt = "Default step prompt"
@@ -166,16 +161,11 @@ class TestReWOOReasoning:
         mock_agent.tool_manager = Mock()
         mock_agent.tool_manager.get_all_tools_schema.return_value = {}
 
-        # Mock the LLM response for planning
-        mock_plan_response = Mock()
-        mock_plan_response.choices = [Mock()]
-        mock_plan_response.choices[0].message.content = "Test plan content"
-
-        # Mock the LLM response for execution
-        mock_exec_response = Mock()
-        mock_exec_response.choices = [Mock()]
-        mock_exec_response.choices[0].message = Mock()
-        mock_exec_response.choices[0].message.tool_calls = [Mock()]
+        mock_plan_response = llm_response_factory(content="Test plan content")
+        mock_exec_response = llm_response_factory(
+            content="Execution plan",
+            tool_calls=[_tool_call("call_1")],
+        )
 
         mock_agent.llm.generate.side_effect = [mock_plan_response, mock_exec_response]
 
@@ -206,7 +196,7 @@ class TestReWOOReasoning:
         ):
             reasoning.plan()
 
-    def test_plan_with_no_tool_calls(self):
+    def test_plan_with_no_tool_calls(self, llm_response_factory):
         """Test plan method when execution returns no tool calls."""
         mock_agent = Mock()
         mock_agent.step_prompt = "Default step prompt"
@@ -221,16 +211,8 @@ class TestReWOOReasoning:
         mock_agent.tool_manager = Mock()
         mock_agent.tool_manager.get_all_tools_schema.return_value = {}
 
-        # Mock the LLM response for planning
-        mock_plan_response = Mock()
-        mock_plan_response.choices = [Mock()]
-        mock_plan_response.choices[0].message.content = "Test plan content"
-
-        # Mock the LLM response for execution with no tool_calls attribute
-        mock_exec_response = Mock()
-        mock_exec_response.choices = [Mock()]
-        mock_exec_response.choices[0].message = Mock()
-        # Don't set tool_calls attribute, but mock the execution result properly
+        mock_plan_response = llm_response_factory(content="Test plan content")
+        mock_exec_response = llm_response_factory(content="Execution plan")
 
         mock_agent.llm.generate.side_effect = [mock_plan_response, mock_exec_response]
 
@@ -268,7 +250,7 @@ class TestReWOOReasoning:
         assert reasoning.remaining_tool_calls == 0
         mock_agent.generate_obs.assert_not_called()
 
-    def test_aplan_new_plan_generation(self):
+    def test_aplan_new_plan_generation(self, llm_response_factory):
         """Test aplan method when generating a new plan."""
         mock_agent = Mock()
         mock_agent.generate_obs.return_value = Observation(
@@ -282,20 +264,15 @@ class TestReWOOReasoning:
         mock_agent.tool_manager = Mock()
         mock_agent.tool_manager.get_all_tools_schema.return_value = {}
 
-        # Mock the async LLM response for planning
-        mock_plan_response = Mock()
-        mock_plan_response.choices = [Mock()]
-        mock_plan_response.choices[0].message.content = "Async plan content"
-
-        # Mock the async LLM response for execution
-        mock_exec_response = Mock()
-        mock_exec_response.choices = [Mock()]
-        mock_exec_response.choices[0].message = Mock()
-        mock_exec_response.choices[0].message.tool_calls = [
-            Mock(),
-            Mock(),
-            Mock(),
-        ]  # 3 tool calls
+        mock_plan_response = llm_response_factory(content="Async plan content")
+        mock_exec_response = llm_response_factory(
+            content="Async execution plan",
+            tool_calls=[
+                _tool_call("call_1"),
+                _tool_call("call_2"),
+                _tool_call("call_3"),
+            ],
+        )
 
         mock_agent.llm.agenerate = AsyncMock(
             side_effect=[mock_plan_response, mock_exec_response]
@@ -314,7 +291,7 @@ class TestReWOOReasoning:
         assert reasoning.current_obs is not None
         mock_agent.generate_obs.assert_called_once()
 
-    def test_aplan_with_selected_tools(self):
+    def test_aplan_with_selected_tools(self, llm_response_factory):
         """Test aplan method with selected tools."""
         mock_agent = Mock()
         mock_agent.generate_obs.return_value = Observation(
@@ -328,16 +305,11 @@ class TestReWOOReasoning:
         mock_agent.tool_manager = Mock()
         mock_agent.tool_manager.get_all_tools_schema.return_value = {}
 
-        # Mock the async LLM response for planning
-        mock_plan_response = Mock()
-        mock_plan_response.choices = [Mock()]
-        mock_plan_response.choices[0].message.content = "Async plan content"
-
-        # Mock the async LLM response for execution
-        mock_exec_response = Mock()
-        mock_exec_response.choices = [Mock()]
-        mock_exec_response.choices[0].message = Mock()
-        mock_exec_response.choices[0].message.tool_calls = [Mock()]
+        mock_plan_response = llm_response_factory(content="Async plan content")
+        mock_exec_response = llm_response_factory(
+            content="Async execution plan",
+            tool_calls=[_tool_call("call_1")],
+        )
 
         mock_agent.llm.agenerate = AsyncMock(
             side_effect=[mock_plan_response, mock_exec_response]
@@ -356,7 +328,7 @@ class TestReWOOReasoning:
         assert isinstance(result, Plan)
         mock_agent.tool_manager.get_all_tools_schema.assert_called_with(selected_tools)
 
-    def test_aplan_with_no_tool_calls(self):
+    def test_aplan_with_no_tool_calls(self, llm_response_factory):
         """Test aplan method when execution returns no tool calls."""
         mock_agent = Mock()
         mock_agent.generate_obs.return_value = Observation(
@@ -370,16 +342,8 @@ class TestReWOOReasoning:
         mock_agent.tool_manager = Mock()
         mock_agent.tool_manager.get_all_tools_schema.return_value = {}
 
-        # Mock the async LLM response for planning
-        mock_plan_response = Mock()
-        mock_plan_response.choices = [Mock()]
-        mock_plan_response.choices[0].message.content = "Async plan content"
-
-        # Mock the async LLM response for execution with no tool_calls attribute
-        mock_exec_response = Mock()
-        mock_exec_response.choices = [Mock()]
-        mock_exec_response.choices[0].message = Mock()
-        # Don't set tool_calls attribute
+        mock_plan_response = llm_response_factory(content="Async plan content")
+        mock_exec_response = llm_response_factory(content="Async execution plan")
 
         mock_agent.llm.agenerate = AsyncMock(
             side_effect=[mock_plan_response, mock_exec_response]
