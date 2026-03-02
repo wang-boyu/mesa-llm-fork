@@ -439,3 +439,68 @@ class TestReWOOReasoning:
         result3 = reasoning.plan()
         assert reasoning.remaining_tool_calls == 0
         assert result3.llm_plan.tool_calls == [mock_tool_3]  # index 2 (3-1=2)
+
+
+class TestReWOOSignatureConsistency:
+    def test_plan_accepts_obs_kwarg(self):
+        """plan() must accept obs= keyword without raising TypeError."""
+        mock_agent = Mock()
+        mock_agent.generate_obs.return_value = Observation(
+            step=1, self_state={}, local_state={}
+        )
+        reasoning = ReWOOReasoning(mock_agent)
+        reasoning.remaining_tool_calls = 1
+        reasoning.current_plan = Mock()
+        reasoning.current_plan.tool_calls = [Mock()]
+        reasoning.current_obs = Observation(step=1, self_state={}, local_state={})
+
+        result = reasoning.plan(obs=Observation(step=5, self_state={}, local_state={}))
+        assert isinstance(result, Plan)
+
+    def test_plan_accepts_ttl_kwarg(self):
+        """plan() must accept ttl= keyword without raising TypeError."""
+        mock_agent = Mock()
+        mock_agent.generate_obs.return_value = Observation(
+            step=1, self_state={}, local_state={}
+        )
+        reasoning = ReWOOReasoning(mock_agent)
+        reasoning.remaining_tool_calls = 1
+        reasoning.current_plan = Mock()
+        reasoning.current_plan.tool_calls = [Mock()]
+        reasoning.current_obs = Observation(step=1, self_state={}, local_state={})
+
+        result = reasoning.plan(ttl=3)
+        assert isinstance(result, Plan)
+
+    def test_aplan_accepts_obs_kwarg(self):
+        """aplan() must accept obs= keyword without raising TypeError."""
+        mock_agent = Mock()
+        mock_agent.generate_obs = Mock()
+
+        reasoning = ReWOOReasoning(mock_agent)
+        reasoning.remaining_tool_calls = 1
+        reasoning.current_plan = Mock()
+        reasoning.current_plan.tool_calls = [Mock()]
+        reasoning.current_obs = Observation(step=1, self_state={}, local_state={})
+
+        result = asyncio.run(
+            reasoning.aplan(
+                "test prompt",
+                obs=Observation(step=5, self_state={}, local_state={}),
+            )
+        )
+        assert isinstance(result, Plan)
+
+    def test_aplan_accepts_ttl_kwarg(self):
+        """aplan() must accept ttl= keyword without raising TypeError."""
+        mock_agent = Mock()
+        mock_agent.generate_obs = Mock()
+
+        reasoning = ReWOOReasoning(mock_agent)
+        reasoning.remaining_tool_calls = 1
+        reasoning.current_plan = Mock()
+        reasoning.current_plan.tool_calls = [Mock()]
+        reasoning.current_obs = Observation(step=1, self_state={}, local_state={})
+
+        result = asyncio.run(reasoning.aplan("test prompt", ttl=5))
+        assert isinstance(result, Plan)
