@@ -48,7 +48,7 @@ model_params = {
     "width": 10,
     "height": 10,
     "reasoning": ReActReasoning,
-    "llm_model": "openai/gpt-4o-mini",
+    "llm_model": "ollama/llama3.1",
     "vision": 5,
     "parallel_stepping": True,
 }

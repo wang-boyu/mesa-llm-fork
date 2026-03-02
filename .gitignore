@@ -342,3 +342,11 @@ final_architecture.png
 GSoC_2025.md
 /architectures
 .instructions/
+.Rproj.user
+
+reports/*_files
+reports/*.html
+reports/references
+reports/mesa_llm_talk_outline.md
+reports/.Rhistory
+reports/mesa_llm.pdf

@@ -1,7 +1,7 @@
 /*-- scss:defaults --*/
 
 // Variables -----------------------------------
-$themeColor: #6ec5cb; // Primary turquoise inspired by the Mesa‑Geo palette
+$themeColor: #005BBB; // Primary turquoise inspired by the Mesa‑Geo palette
 $accentColor: #f0f0f0;
 $textColor: #222;
 $backgroundColor: #fff;
@@ -93,44 +93,78 @@ $heading4Size: 1.0em;
 // Targeting the title content specifically
 #title-slide {
     color: $themeColor;
+    display: flex !important;
+    flex-direction: column;
+    justify-content: flex-start !important;
+    align-items: center;
+    min-height: 100%;
+    padding-top: 25vh !important;
+    box-sizing: border-box;
+    text-align: center;
 
     .title {
-        // The blue box effect - reduced size
         background-color: transparent;
         color: white;
         box-shadow: none;
         padding: 0;
-        margin-bottom: 1.2em;
-
-        h1 {
-            color: white;
-            margin: 0;
-            font-size: 1.2em; // Reduced font size
-            background: none; // Remove default h1 background
-            padding: 0;
-            text-transform: none !important;
-        }
+        margin: 0 auto 1.2em auto;
+        max-width: 92%;
+        font-size: 1.62em;
+        line-height: 1.03;
+        text-transform: none !important;
     }
 
     .subtitle {
-        margin-top: 0.5em;
-        font-size: 1.5em;
-        color: lighten(white, 20%);
+        margin: 0 auto 0.9em auto;
+        max-width: 90%;
+        font-size: 0.82em;
+        line-height: 1.2;
+        color: rgba(255, 255, 255, 0.92);
         font-weight: 300;
     }
 
     .quarto-title-authors {
-        display: block;
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 0.22em 0.7em;
+        width: 94%;
+        margin: 0.45em auto 0.9em auto;
         padding: 0;
+        align-items: start;
     }
 
-    .quarto-title-author-name,
-    .quarto-title-affiliation,
-    .date {
-        font-size: 1em;
+    .quarto-title-author {
+        margin: 0;
+    }
+
+    .quarto-title-author-name {
+        font-size: 0.98em;
+        line-height: 1.04;
         color: white;
         display: block;
+        margin-bottom: 0.08em;
     }
+
+    .quarto-title-affiliation {
+        font-size: 0.6em;
+        line-height: 1.04;
+        color: rgba(255, 255, 255, 0.9);
+        display: block;
+        margin: 0;
+    }
+
+    .date {
+        display: none;
+    }
+}
+
+#title-slide::after {
+    content: attr(data-event-label);
+    display: block;
+    margin-top: 0.5em;
+    font-size: 0.8em;
+    line-height: 1.05;
+    color: white;
 }
 
 .reveal .slides section:not(#title-slide) h1 {
