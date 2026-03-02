@@ -1,0 +1,18 @@
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const reveal = document.querySelector(".reveal");
+  if (!reveal) return;
+
+  // avoid duplicates on hot reload
+  if (reveal.querySelector(":scope > .header")) return;
+
+  const header = document.createElement("div");
+  header.className = "header";
+
+  const banner = document.createElement("div");
+  banner.className = "abm-banner";
+
+  header.appendChild(banner);
+  reveal.prepend(header);
+});
+</script>

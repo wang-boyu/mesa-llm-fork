@@ -1,0 +1,31 @@
+---
+title: "Mesa-LLM: Generative Agent-Based Modeling with Large Language Models Empowered Agents"
+author: "Boyu Wang"
+date: 03/18/2026
+date-format: YYYY.MM.DD
+format:
+  revealjs:
+    theme: [serif, style.scss]
+    include-in-header:
+      - banner.html
+    slide-number: true
+    center: false
+    margin: 0.0
+    transition: none
+    background-transition: none
+    hash: true
+    chalkboard: true
+    highlight-style: github
+    code-line-numbers: false
+    title-slide-attributes:
+      data-background-color: "#005BBB"
+    pointer:
+      key: "q"
+      color: "red"
+      pointerSize: 16
+      alwaysVisible: false
+revealjs-plugins:
+  - pointer
+editor_options:
+  chunk_output_type: console
+---
