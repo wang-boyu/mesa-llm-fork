@@ -212,8 +212,11 @@ def _parse_docstring(
 ) -> tuple[str, dict[str, str], str | None]:
     """
     Parse a function's Google-style docstring.
+
     Args:
         func: The function to parse the docstring of.
+        ignore_agent: If True, skip validating docstring entries for any
+            parameter named `agent`. Default is True.
 
     Returns:
         summary: One-line/high-level description that appears before the *Args* section.
