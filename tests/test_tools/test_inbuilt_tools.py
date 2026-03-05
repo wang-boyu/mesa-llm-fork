@@ -595,7 +595,7 @@ def test_speak_to_skips_non_llm_recipient(mocker):
 
     sender = DummyAgent(unique_id=1, model=model)
     llm_recipient = DummyAgent(unique_id=2, model=model)
-    rule_recipient = DummyAgent(unique_id=3, model=model) 
+    rule_recipient = DummyAgent(unique_id=3, model=model)
 
     llm_recipient.memory = SimpleNamespace(add_to_memory=mocker.Mock())
 
