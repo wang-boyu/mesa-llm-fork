@@ -582,3 +582,30 @@ def test_move_one_step_torus_wrap_orthogonal_grid():
 
     assert agent.cell is wrapped_cell
     assert result == "agent 29 moved to (2, 2)."
+
+
+def test_speak_to_skips_non_llm_recipient(mocker):
+    """
+    speak_to must not crash when a recipient has no memory attribute.
+
+    This covers the case where a non-LLM (rule-based) agent is listed as a
+    recipient.
+    """
+    model = DummyModel()
+
+    sender = DummyAgent(unique_id=1, model=model)
+    llm_recipient = DummyAgent(unique_id=2, model=model)
+    rule_recipient = DummyAgent(unique_id=3, model=model) 
+
+    llm_recipient.memory = SimpleNamespace(add_to_memory=mocker.Mock())
+
+    model.agents = [sender, llm_recipient, rule_recipient]
+
+    ret = speak_to(sender, [2, 3], "Hello both")
+
+    llm_recipient.memory.add_to_memory.assert_called_once()
+    call_kwargs = llm_recipient.memory.add_to_memory.call_args[1]
+    assert call_kwargs["type"] == "message"
+    assert call_kwargs["content"]["message"] == "Hello both"
+
+    assert "2" in ret and "3" in ret

@@ -1,3 +1,4 @@
+import logging
 from typing import TYPE_CHECKING, Any
 
 from mesa.discrete_space import (
@@ -14,6 +15,8 @@ from mesa_llm.tools.tool_decorator import tool
 
 if TYPE_CHECKING:
     from mesa_llm.llm_agent import LLMAgent
+
+logger = logging.getLogger(__name__)
 
 # Mapping directions to (dx, dy) for Cartesian-style spaces.
 direction_map_xy = {
@@ -208,6 +211,12 @@ def speak_to(
     ]
 
     for recipient in listener_agents:
+        if not hasattr(recipient, "memory"):
+            logger.warning(
+                "Agent %s has no memory attribute; skipping speak_to.",
+                recipient.unique_id,
+            )
+            continue
         recipient.memory.add_to_memory(
             type="message",
             content={
