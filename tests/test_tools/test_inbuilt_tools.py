@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from types import SimpleNamespace
 
 import pytest
@@ -609,3 +610,19 @@ def test_speak_to_skips_non_llm_recipient(mocker):
     assert call_kwargs["content"]["message"] == "Hello both"
 
     assert "2" in ret and "3" in ret
+
+
+def test_speak_to_warns_for_non_llm_recipient(mocker, caplog):
+    model = DummyModel()
+    sender = DummyAgent(unique_id=10, model=model)
+    rule_recipient = DummyAgent(unique_id=11, model=model)  # no .memory
+
+    model.agents = [sender, rule_recipient]
+
+    with caplog.at_level(logging.WARNING, logger="mesa_llm.tools.inbuilt_tools"):
+        speak_to(sender, [11], "Test message")
+
+    assert any(
+        "11" in record.message and "memory" in record.message
+        for record in caplog.records
+    )
