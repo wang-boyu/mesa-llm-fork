@@ -3,6 +3,8 @@
 import json
 from unittest.mock import Mock, patch
 
+import pytest
+
 from mesa_llm.recording.agent_analysis import AgentViewer, quick_agent_view
 
 
@@ -23,14 +25,15 @@ class TestAgentViewer:
         assert 123 in viewer.agent_events
         assert 456 in viewer.agent_events
 
-    def test_init_with_pickle_file(self, temp_recording_file, sample_recording_data):
-        """Test initializing AgentViewer with pickle file."""
+    def test_init_with_pickle_file_rejected(self, temp_recording_file):
+        """Test pickle recordings are rejected."""
         _, pkl_path = temp_recording_file
 
-        viewer = AgentViewer(str(pkl_path))
-
-        assert viewer.data == sample_recording_data
-        assert len(viewer.events) == 7
+        with pytest.raises(
+            ValueError,
+            match="Pickle recordings are no longer supported for security reasons",
+        ):
+            AgentViewer(str(pkl_path))
 
     def test_organize_events_by_agent(self, temp_recording_file):
         """Test organizing events by agent ID."""

@@ -8,7 +8,6 @@ simulation recorder formats.
 """
 
 import json
-import pickle
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
@@ -36,11 +35,13 @@ class AgentViewer:
     def _load_recording(self):
         """Load simulation recording from file."""
         if self.recording_path.suffix == ".pkl":
-            with open(self.recording_path, "rb") as f:
-                return pickle.load(f)  # noqa: S301
-        else:
-            with open(self.recording_path) as f:
-                return json.load(f)
+            raise ValueError(
+                "Pickle recordings are no longer supported for security reasons. "
+                "Use a JSON recording instead."
+            )
+
+        with open(self.recording_path) as f:
+            return json.load(f)
 
     def _organize_events_by_agent(self):
         """Organize events by agent ID."""

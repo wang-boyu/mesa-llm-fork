@@ -1,7 +1,6 @@
 """Tests for the SimulationRecorder class."""
 
 import json
-import pickle
 import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
@@ -259,24 +258,10 @@ class TestSimulationRecorder:
         # Check agent summaries
         assert "123" in data["agent_summaries"]
 
-    def test_save_pickle_format(self, recorder, temp_dir):
-        """Test saving recording in pickle format."""
-        # Add max_steps to mock model
-        recorder.model.max_steps = 10
-        recorder.record_event("test_event", {"data": "test"})
-
-        filepath = recorder.save(filename="test_recording.pkl", format="pickle")
-
-        assert filepath == temp_dir / "test_recording.pkl"
-        assert filepath.exists()
-
-        # Load and verify content
-        with open(filepath, "rb") as f:
-            data = pickle.load(f)  # noqa: S301
-
-        assert "metadata" in data
-        assert "events" in data
-        assert "agent_summaries" in data
+    def test_save_pickle_format_rejected(self, recorder):
+        """Test pickle format is rejected."""
+        with pytest.raises(ValueError, match="Format must be 'json'"):
+            recorder.save(filename="test_recording.pkl", format="pickle")
 
     def test_save_auto_filename(self, recorder, temp_dir):
         """Test auto-generating filename when saving."""
@@ -294,7 +279,7 @@ class TestSimulationRecorder:
 
     def test_save_invalid_format(self, recorder):
         """Test saving with invalid format raises error."""
-        with pytest.raises(ValueError, match="Format must be 'json' or 'pickle'"):
+        with pytest.raises(ValueError, match="Format must be 'json'"):
             recorder.save(format="xml")
 
     def test_get_stats(self, recorder, mock_model):

@@ -288,6 +288,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+requirements.txt
 
 # Spyder project settings
 .spyderproject
@@ -342,3 +343,6 @@ final_architecture.png
 GSoC_2025.md
 /architectures
 .instructions/
+v
+.github
+

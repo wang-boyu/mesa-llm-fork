@@ -7,7 +7,6 @@ including agent observations, plans, actions, messages, and state changes.
 
 import json
 import logging
-import pickle
 import uuid
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
@@ -205,14 +204,16 @@ class SimulationRecorder:
 
         Args:
             filename: Optional filename. If None, auto-generates based on format.
-            format: Save format, either "json" or "pickle".
+            format: Save format. Only "json" is supported.
         """
-        if format not in ["json", "pickle"]:
-            raise ValueError("Format must be 'json' or 'pickle'")
+        if format != "json":
+            raise ValueError("Format must be 'json'")
 
         if filename is None:
-            extension = "json" if format == "json" else "pkl"
-            filename = f"simulation_{self.simulation_id}_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.{extension}"
+            filename = (
+                f"simulation_{self.simulation_id}_"
+                f"{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.json"
+            )
 
         filepath = self.output_dir / filename
 
@@ -272,13 +273,8 @@ class SimulationRecorder:
             },
         }
 
-        # Save based on format
-        if format == "json":
-            with open(filepath, "w") as f:
-                json.dump(export_data, f, indent=2, default=str)
-        elif format == "pickle":
-            with open(filepath, "wb") as f:
-                pickle.dump(export_data, f)
+        with open(filepath, "w") as f:
+            json.dump(export_data, f, indent=2, default=str)
 
         logger.info("Simulation recording saved to: %s", filepath)
         return filepath
