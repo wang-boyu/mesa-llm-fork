@@ -7,7 +7,9 @@ including agent observations, plans, actions, messages, and state changes.
 
 import json
 import logging
+import pickle
 import uuid
+import warnings
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -204,15 +206,16 @@ class SimulationRecorder:
 
         Args:
             filename: Optional filename. If None, auto-generates based on format.
-            format: Save format. Only "json" is supported.
+            format: Save format, either "json" or "pickle".
         """
-        if format != "json":
-            raise ValueError("Format must be 'json'")
+        if format not in ["json", "pickle"]:
+            raise ValueError("Format must be 'json' or 'pickle'")
 
         if filename is None:
+            extension = "json" if format == "json" else "pkl"
             filename = (
                 f"simulation_{self.simulation_id}_"
-                f"{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.json"
+                f"{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.{extension}"
             )
 
         filepath = self.output_dir / filename
@@ -273,8 +276,19 @@ class SimulationRecorder:
             },
         }
 
-        with open(filepath, "w") as f:
-            json.dump(export_data, f, indent=2, default=str)
+        if format == "json":
+            with open(filepath, "w") as f:
+                json.dump(export_data, f, indent=2, default=str)
+        else:
+            warnings.warn(
+                "Saving recordings as pickle produces files that can execute "
+                "arbitrary code when loaded. Only share or load trusted local "
+                ".pkl files.",
+                UserWarning,
+                stacklevel=2,
+            )
+            with open(filepath, "wb") as f:
+                pickle.dump(export_data, f)
 
         logger.info("Simulation recording saved to: %s", filepath)
         return filepath

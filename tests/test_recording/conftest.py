@@ -1,4 +1,5 @@
 import json
+import pickle
 import tempfile
 from pathlib import Path
 from unittest.mock import Mock
@@ -155,6 +156,6 @@ def temp_recording_file(sample_recording_data):
 
         pkl_path = Path(tmpdir) / "test_recording.pkl"
         with open(pkl_path, "wb") as f:
-            f.write(b"unsafe pickle placeholder")
+            pickle.dump(sample_recording_data, f)
 
         yield json_path, pkl_path

@@ -25,15 +25,18 @@ class TestAgentViewer:
         assert 123 in viewer.agent_events
         assert 456 in viewer.agent_events
 
-    def test_init_with_pickle_file_rejected(self, temp_recording_file):
-        """Test pickle recordings are rejected."""
+    def test_init_with_pickle_file_warns(self, temp_recording_file, sample_recording_data):
+        """Test pickle recordings load with a warning."""
         _, pkl_path = temp_recording_file
 
-        with pytest.raises(
-            ValueError,
-            match="Pickle recordings are no longer supported for security reasons",
+        with pytest.warns(
+            UserWarning,
+            match="Loading pickle recordings can execute arbitrary code",
         ):
-            AgentViewer(str(pkl_path))
+            viewer = AgentViewer(str(pkl_path))
+
+        assert viewer.data == sample_recording_data
+        assert len(viewer.events) == 7
 
     def test_organize_events_by_agent(self, temp_recording_file):
         """Test organizing events by agent ID."""
