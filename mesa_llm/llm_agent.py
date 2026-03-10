@@ -216,7 +216,7 @@ class LLMAgent(Agent):
                     )
                 ),
                 "internal_state": [
-                    s for s in i.internal_state if not s.startswith("_")
+                    s for s in getattr(i, "internal_state", []) if not s.startswith("_")
                 ],
             }
         return self_state, local_state

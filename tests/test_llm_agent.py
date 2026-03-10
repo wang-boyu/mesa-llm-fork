@@ -4,6 +4,7 @@ import json
 import re
 
 import pytest
+from mesa.agent import Agent
 from mesa.discrete_space import OrthogonalMooreGrid
 from mesa.model import Model
 from mesa.space import ContinuousSpace, MultiGrid, SingleGrid
@@ -592,6 +593,76 @@ def test_generate_obs_orthogonal_grid_branches(monkeypatch):
     obs = agent.generate_obs()
 
     assert len(obs.local_state) == 0
+
+
+def test_generate_obs_with_non_llm_neighbor(monkeypatch):
+    """
+    _build_observation should work when a neighbor is a plain Mesa Agent
+    that has no internal_state attribute (e.g. a rule-based agent in a mixed sim).
+    """
+    monkeypatch.setenv("GEMINI_API_KEY", "dummy")
+
+    class PlainAgent(Agent):
+        """A regular Mesa agent with NO internal_state, simulates non-LLM agents."""
+
+        def step(self):
+            pass
+
+    class MixedModel(Model):
+        def __init__(self):
+            super().__init__(seed=42)
+            self.grid = MultiGrid(5, 5, torus=False)
+
+    model = MixedModel()
+    llm_agent = LLMAgent(model=model, reasoning=ReActReasoning, vision=-1)
+    plain = PlainAgent(model=model)
+
+    model.grid.place_agent(llm_agent, (2, 2))
+    model.grid.place_agent(plain, (3, 3))
+
+    monkeypatch.setattr(llm_agent.memory, "add_to_memory", lambda *a, **kw: None)
+
+    obs = llm_agent.generate_obs()
+
+    plain_key = f"PlainAgent {plain.unique_id}"
+    assert plain_key in obs.local_state
+    # Non-LLM agent should have an empty internal_state
+    assert obs.local_state[plain_key]["internal_state"] == []
+
+
+@pytest.mark.asyncio
+async def test_agenerate_obs_with_non_llm_neighbor(monkeypatch):
+    """
+    Async path shares _build_observation, must work for agenerate_obs().
+    """
+    monkeypatch.setenv("GEMINI_API_KEY", "dummy")
+
+    class PlainAgent(Agent):
+        def step(self):
+            pass
+
+    class MixedModel(Model):
+        def __init__(self):
+            super().__init__(seed=42)
+            self.grid = MultiGrid(5, 5, torus=False)
+
+    model = MixedModel()
+    llm_agent = LLMAgent(model=model, reasoning=ReActReasoning, vision=-1)
+    plain = PlainAgent(model=model)
+
+    model.grid.place_agent(llm_agent, (2, 2))
+    model.grid.place_agent(plain, (3, 3))
+
+    async def fake_aadd_to_memory(*args, **kwargs):
+        pass
+
+    monkeypatch.setattr(llm_agent.memory, "aadd_to_memory", fake_aadd_to_memory)
+
+    obs = await llm_agent.agenerate_obs()
+
+    plain_key = f"PlainAgent {plain.unique_id}"
+    assert plain_key in obs.local_state
+    assert obs.local_state[plain_key]["internal_state"] == []
 
 
 # ---------------------------------------------------------------------------
