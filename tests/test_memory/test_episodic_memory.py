@@ -333,6 +333,62 @@ class TestEpisodicMemory:
             "No message here" not in history
         )  # step 2  does not have message field thus it must not be present in the returned string
 
+    def test_get_communication_history_nested_dict(self, episodic_mock_agent):
+        """
+        Regression test: get_communication_history must render readable text when
+        the message entry is a nested dict (the real structure produced by speak_to).
+
+        speak_to stores:
+            add_to_memory(type="message", content={"message": <text>, "sender": <id>, ...})
+
+        EpisodicMemory._finalize_entry wraps this under the type key, so:
+            entry.content = {"message": {"message": <text>, "sender": <id>, "importance": N}}
+
+        The old code rendered the raw dict; the fixed code must produce
+        "Agent <id> says: <text>".
+        """
+        memory = EpisodicMemory(
+            agent=episodic_mock_agent, llm_model="provider/test_model"
+        )
+
+        # Simulate what _finalize_entry produces after speak_to + importance grading
+        entry = MemoryEntry(
+            content={"message": {"message": "meet me at the north", "sender": 7, "importance": 3}},
+            step=5,
+            agent=episodic_mock_agent,
+        )
+        memory.memory_entries.append(entry)
+
+        history = memory.get_communication_history()
+
+        assert "Agent 7 says: meet me at the north" in history
+        assert "step 5" in history
+        # Must not expose raw dict representation
+        assert "{'message'" not in history
+
+    def test_get_communication_history_skips_non_message_entries(self, episodic_mock_agent):
+        """Entries without a 'message' key must not appear in communication history."""
+        memory = EpisodicMemory(
+            agent=episodic_mock_agent, llm_model="provider/test_model"
+        )
+
+        entry_obs = MemoryEntry(
+            content={"observation": {"position": (1, 1), "importance": 2}},
+            step=3,
+            agent=episodic_mock_agent,
+        )
+        entry_msg = MemoryEntry(
+            content={"message": {"message": "hello", "sender": 1, "importance": 2}},
+            step=4,
+            agent=episodic_mock_agent,
+        )
+        memory.memory_entries.extend([entry_obs, entry_msg])
+
+        history = memory.get_communication_history()
+
+        assert "hello" in history
+        assert "position" not in history
+
     def test_retrieve_empty_memory(self, mock_agent):
         """
         Function to verify empty list is returned when retrieval of memory is empty

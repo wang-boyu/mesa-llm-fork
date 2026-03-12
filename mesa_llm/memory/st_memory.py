@@ -1,7 +1,7 @@
 from collections import deque
 from typing import TYPE_CHECKING
 
-from mesa_llm.memory.memory import Memory, MemoryEntry
+from mesa_llm.memory.memory import Memory, MemoryEntry, _format_message_entry
 
 if TYPE_CHECKING:
     from mesa_llm.llm_agent import LLMAgent
@@ -100,7 +100,7 @@ class ShortTermMemory(Memory):
         """
         return "\n".join(
             [
-                f"step {entry.step}: {entry.content['message']}\n\n"
+                f"step {entry.step}: {_format_message_entry(entry.content['message'])}\n\n"
                 for entry in self.short_term_memory
                 if "message" in entry.content
             ]
