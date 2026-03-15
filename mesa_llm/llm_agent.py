@@ -92,10 +92,10 @@ class LLMAgent(Agent):
         await self.memory.aadd_to_memory(
             type="action",
             content={
-                k: v
-                for tool_call in tool_call_resp
-                for k, v in tool_call.items()
-                if k not in ["tool_call_id", "role"]
+                "tool_calls": [
+                    {k: v for k, v in tc.items() if k not in ["tool_call_id", "role"]}
+                    for tc in tool_call_resp
+                ]
             },
         )
 
@@ -117,10 +117,10 @@ class LLMAgent(Agent):
         self.memory.add_to_memory(
             type="action",
             content={
-                k: v
-                for tool_call in tool_call_resp
-                for k, v in tool_call.items()
-                if k not in ["tool_call_id", "role"]
+                "tool_calls": [
+                    {k: v for k, v in tc.items() if k not in ["tool_call_id", "role"]}
+                    for tc in tool_call_resp
+                ]
             },
         )
 
@@ -216,7 +216,7 @@ class LLMAgent(Agent):
                     )
                 ),
                 "internal_state": [
-                    s for s in i.internal_state if not s.startswith("_")
+                    s for s in getattr(i, "internal_state", []) if not s.startswith("_")
                 ],
             }
         return self_state, local_state
@@ -267,15 +267,15 @@ class LLMAgent(Agent):
                 type="message",
                 content={
                     "message": message,
-                    "sender": self,
+                    "sender": self.unique_id,
                 },
             )
         await self.memory.aadd_to_memory(
             type="message",
             content={
                 "message": message,
-                "sender": self,
-                "recipients": list(recipients),
+                "sender": self.unique_id,
+                "recipients": [r.unique_id for r in recipients],
             },
         )
 
@@ -290,15 +290,15 @@ class LLMAgent(Agent):
                 type="message",
                 content={
                     "message": message,
-                    "sender": self,
+                    "sender": self.unique_id,
                 },
             )
         self.memory.add_to_memory(
             type="message",
             content={
                 "message": message,
-                "sender": self,
-                "recipients": list(recipients),
+                "sender": self.unique_id,
+                "recipients": [r.unique_id for r in recipients],
             },
         )
 

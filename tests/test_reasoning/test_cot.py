@@ -13,16 +13,14 @@ from mesa_llm.reasoning.reasoning import Observation, Plan
 
 
 class TestCoTReasoning:
-    def test_cot_reasoning_initialization(self):
+    def test_cot_reasoning_initialization(self, mock_agent):
         """Test CoTReasoning initialization."""
-        mock_agent = Mock()
         reasoning = CoTReasoning(mock_agent)
 
         assert reasoning.agent == mock_agent
 
-    def test_get_cot_system_prompt_with_memory(self):
+    def test_get_cot_system_prompt_with_memory(self, mock_agent):
         """Test get_cot_system_prompt with memory methods available."""
-        mock_agent = Mock()
         mock_agent.memory = Mock()
         mock_agent.memory.format_long_term.return_value = "Long term memory content"
         mock_agent.memory.format_short_term.return_value = "Short term memory content"
@@ -38,7 +36,7 @@ class TestCoTReasoning:
         assert "Thought 1:" in prompt
         assert "Action:" in prompt
 
-    def test_plan_returns_proper_plan(self, monkeypatch):
+    def test_plan_returns_proper_plan(self, monkeypatch, llm_response_factory):
         """
         Test CoTReasoning.plan without triggering _step_display_data and without calling the real LLM.
         """
@@ -48,9 +46,6 @@ class TestCoTReasoning:
             def __init__(self):
                 super().__init__(seed=45)
                 self.grid = MultiGrid(3, 3, torus=False)
-
-        # Monkeypatch a dummy API key so ModuleLLM does not fail
-        monkeypatch.setenv("GEMINI_API_KEY", "dummy")
 
         # Create an LLMAgent with CoTReasoning
         model = DummyModel()
@@ -66,14 +61,12 @@ class TestCoTReasoning:
         if hasattr(agent.reasoning.agent, "_step_display_data"):
             delattr(agent.reasoning.agent, "_step_display_data")
 
-        # Prepare mocked llm.generate() responses
-        class MockResp:
-            def __init__(self, content):
-                self.choices = [
-                    type("obj", (), {"message": type("mobj", (), {"content": content})})
-                ]
-
-        responses = iter([MockResp("mock plan content"), MockResp("mock execution")])
+        responses = iter(
+            [
+                llm_response_factory(content="mock plan content"),
+                llm_response_factory(content="mock execution"),
+            ]
+        )
 
         def fake_generate(*args, **kwargs):
             return next(responses)
@@ -97,9 +90,8 @@ class TestCoTReasoning:
             content={"content": str(obs)},
         )
 
-    def test_plan_with_selected_tools(self):
+    def test_plan_with_selected_tools(self, llm_response_factory, mock_agent):
         """Test plan method with selected tools."""
-        mock_agent = Mock()
         mock_agent.step_prompt = "You are an agent in a simulatio"
         mock_agent.memory = Mock()
         mock_agent.memory.format_long_term.return_value = "Long term memory"
@@ -109,17 +101,10 @@ class TestCoTReasoning:
         mock_agent.tool_manager = Mock()
         mock_agent.tool_manager.get_all_tools_schema.return_value = {}
         mock_agent._step_display_data = {}  # Use real dict instead of Mock
-        # Mock the LLM response for planning
-        mock_plan_response = Mock()
-        mock_plan_response.choices = [Mock()]
-        mock_plan_response.choices[
-            0
-        ].message.content = "Thought 1: Test reasoning\nAction: test_action"
-
-        # Mock the LLM response for execution
-        mock_exec_response = Mock()
-        mock_exec_response.choices = [Mock()]
-        mock_exec_response.choices[0].message = Mock()
+        mock_plan_response = llm_response_factory(
+            content="Thought 1: Test reasoning\nAction: test_action"
+        )
+        mock_exec_response = llm_response_factory(content="executor response")
 
         mock_agent.llm.generate.side_effect = [mock_plan_response, mock_exec_response]
 
@@ -134,9 +119,8 @@ class TestCoTReasoning:
         # Check that tool schema was called with selected tools
         assert mock_agent.tool_manager.get_all_tools_schema.call_count == 2
 
-    def test_plan_no_prompt_error(self):
+    def test_plan_no_prompt_error(self, mock_agent):
         """Test plan method raises error when no prompt is provided."""
-        mock_agent = Mock()
         mock_agent.step_prompt = None
         mock_agent.memory = Mock()
 
@@ -148,9 +132,10 @@ class TestCoTReasoning:
         ):
             reasoning.plan(obs=obs)
 
-    def test_aplan_uses_step_prompt_when_no_prompt_given(self):
+    def test_aplan_uses_step_prompt_when_no_prompt_given(
+        self, llm_response_factory, mock_agent
+    ):
         """Test aplan falls back to agent.step_prompt like sync plan does."""
-        mock_agent = Mock()
         mock_agent.step_prompt = "Default step prompt"
         mock_agent.memory = Mock()
         mock_agent.memory.format_long_term.return_value = "Long term memory"
@@ -161,16 +146,10 @@ class TestCoTReasoning:
         mock_agent.tool_manager.get_all_tools_schema.return_value = {}
         mock_agent._step_display_data = {}
 
-        mock_plan_response = Mock()
-        mock_plan_response.choices = [Mock()]
-        mock_plan_response.choices[
-            0
-        ].message.content = "Thought 1: reasoning\nAction: act"
-
-        mock_exec_response = Mock()
-        mock_exec_response.choices = [Mock()]
-        mock_exec_response.choices[0].message = Mock()
-
+        mock_plan_response = llm_response_factory(
+            content="Thought 1: reasoning\nAction: act"
+        )
+        mock_exec_response = llm_response_factory(content="executor response")
         mock_agent.llm.agenerate = AsyncMock(
             side_effect=[mock_plan_response, mock_exec_response]
         )
@@ -182,10 +161,8 @@ class TestCoTReasoning:
         result = asyncio.run(reasoning.aplan(obs=obs))
         assert isinstance(result, Plan)
 
-    def test_aplan_async_version(self):
+    def test_aplan_async_version(self, llm_response_factory, mock_agent):
         """Test aplan async method."""
-        mock_agent = Mock()
-        mock_agent.memory = Mock()
         mock_agent.memory.format_long_term.return_value = "Long term memory"
         mock_agent.memory.format_short_term.return_value = "Short term memory"
         mock_agent.memory.add_to_memory = Mock()
@@ -195,17 +172,10 @@ class TestCoTReasoning:
         mock_agent.tool_manager.get_all_tools_schema.return_value = {}
         mock_agent._step_display_data = {}  # Use real dict instead of Mock
 
-        # Mock the async LLM response for planning
-        mock_plan_response = Mock()
-        mock_plan_response.choices = [Mock()]
-        mock_plan_response.choices[
-            0
-        ].message.content = "Thought 1: Async reasoning\nAction: async_action"
-
-        # Mock the async LLM response for execution
-        mock_exec_response = Mock()
-        mock_exec_response.choices = [Mock()]
-        mock_exec_response.choices[0].message = Mock()
+        mock_plan_response = llm_response_factory(
+            content="Thought 1: Async reasoning\nAction: async_action"
+        )
+        mock_exec_response = llm_response_factory(content="async executor response")
 
         mock_agent.llm.agenerate = AsyncMock(
             side_effect=[mock_plan_response, mock_exec_response]

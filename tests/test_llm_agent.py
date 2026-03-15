@@ -1,8 +1,10 @@
 # tests/test_llm_agent.py
 
+import json
 import re
 
 import pytest
+from mesa.agent import Agent
 from mesa.discrete_space import OrthogonalMooreGrid
 from mesa.model import Model
 from mesa.space import ContinuousSpace, MultiGrid, SingleGrid
@@ -14,8 +16,6 @@ from mesa_llm.reasoning.react import ReActReasoning
 
 
 def test_apply_plan_adds_to_memory(monkeypatch):
-    monkeypatch.setenv("GEMINI_API_KEY", "dummy")
-
     class DummyModel(Model):
         def __init__(self):
             super().__init__(seed=42)
@@ -60,18 +60,129 @@ def test_apply_plan_adds_to_memory(monkeypatch):
 
     assert resp == fake_response
 
-    assert {
-        "tool": "foo",
-        "argument": "bar",
-    } in agent.memory.step_content.values() or agent.memory.step_content == {
-        "tool": "foo",
-        "argument": "bar",
+    action_content = agent.memory.step_content.get("action")
+    assert action_content is not None
+    assert "tool_calls" in action_content
+    assert len(action_content["tool_calls"]) == 1
+    assert action_content["tool_calls"][0] == {"tool": "foo", "argument": "bar"}
+
+
+def test_apply_plan_preserves_multiple_tool_calls(monkeypatch):
+    """All tool call results must be preserved when the LLM returns >1 tool call."""
+    monkeypatch.setenv("GEMINI_API_KEY", "dummy")
+
+    class DummyModel(Model):
+        def __init__(self):
+            super().__init__(seed=42)
+            self.grid = MultiGrid(5, 5, torus=False)
+
+    model = DummyModel()
+    agent = LLMAgent.create_agents(
+        model,
+        n=1,
+        reasoning=ReActReasoning,
+        system_prompt="test",
+        vision=-1,
+        internal_state=["test_state"],
+    ).to_list()[0]
+    model.grid.place_agent(agent, (1, 1))
+    agent.memory = ShortTermMemory(agent=agent, n=5, display=False)
+
+    fake_response = [
+        {
+            "tool_call_id": "1",
+            "role": "tool",
+            "name": "move_one_step",
+            "response": "agent moved to (3, 4)",
+        },
+        {
+            "tool_call_id": "2",
+            "role": "tool",
+            "name": "arrest_citizen",
+            "response": "Citizen 12 arrested",
+        },
+    ]
+    monkeypatch.setattr(
+        agent.tool_manager, "call_tools", lambda agent, llm_response: fake_response
+    )
+
+    plan = Plan(step=0, llm_plan="do something")
+    agent.apply_plan(plan)
+
+    action_content = agent.memory.step_content.get("action")
+    assert action_content is not None
+    assert "tool_calls" in action_content
+    assert len(action_content["tool_calls"]) == 2
+    assert action_content["tool_calls"][0] == {
+        "name": "move_one_step",
+        "response": "agent moved to (3, 4)",
+    }
+    assert action_content["tool_calls"][1] == {
+        "name": "arrest_citizen",
+        "response": "Citizen 12 arrested",
+    }
+
+
+@pytest.mark.asyncio
+async def test_aapply_plan_preserves_multiple_tool_calls(monkeypatch):
+    """Async variant: all tool call results must be preserved."""
+    monkeypatch.setenv("GEMINI_API_KEY", "dummy")
+
+    class DummyModel(Model):
+        def __init__(self):
+            super().__init__(seed=42)
+            self.grid = MultiGrid(5, 5, torus=False)
+
+    model = DummyModel()
+    agent = LLMAgent.create_agents(
+        model,
+        n=1,
+        reasoning=ReActReasoning,
+        system_prompt="test",
+        vision=-1,
+        internal_state=["test_state"],
+    ).to_list()[0]
+    model.grid.place_agent(agent, (1, 1))
+    agent.memory = ShortTermMemory(agent=agent, n=5, display=False)
+
+    fake_response = [
+        {
+            "tool_call_id": "1",
+            "role": "tool",
+            "name": "move_one_step",
+            "response": "agent moved to (3, 4)",
+        },
+        {
+            "tool_call_id": "2",
+            "role": "tool",
+            "name": "arrest_citizen",
+            "response": "Citizen 12 arrested",
+        },
+    ]
+
+    async def fake_acall_tools(agent, llm_response):
+        return fake_response
+
+    monkeypatch.setattr(agent.tool_manager, "acall_tools", fake_acall_tools)
+
+    plan = Plan(step=0, llm_plan="do something")
+    await agent.aapply_plan(plan)
+
+    action_content = agent.memory.step_content.get("action")
+    assert action_content is not None
+    assert "tool_calls" in action_content
+    assert len(action_content["tool_calls"]) == 2
+    assert action_content["tool_calls"][0] == {
+        "name": "move_one_step",
+        "response": "agent moved to (3, 4)",
+    }
+    assert action_content["tool_calls"][1] == {
+        "name": "arrest_citizen",
+        "response": "Citizen 12 arrested",
     }
 
 
 def test_generate_obs_with_one_neighbor(monkeypatch):
-    monkeypatch.setenv("GEMINI_API_KEY", "dummy")
-
     class DummyModel(Model):
         def __init__(self):
             super().__init__(seed=45)
@@ -128,8 +239,6 @@ def test_generate_obs_with_one_neighbor(monkeypatch):
 
 
 def test_send_message_updates_both_agents_memory(monkeypatch):
-    monkeypatch.setenv("GEMINI_API_KEY", "dummy")
-
     class DummyModel(Model):
         def __init__(self):
             super().__init__(seed=45)
@@ -274,8 +383,6 @@ async def test_asend_message_updates_both_agents_memory(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_aapply_plan_adds_to_memory(monkeypatch):
-    monkeypatch.setenv("GEMINI_API_KEY", "dummy")
-
     class DummyModel(Model):
         def __init__(self):
             super().__init__(seed=42)
@@ -323,8 +430,6 @@ async def test_aapply_plan_adds_to_memory(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_agenerate_obs_with_one_neighbor(monkeypatch):
-    monkeypatch.setenv("GEMINI_API_KEY", "dummy")
-
     class DummyModel(Model):
         def __init__(self):
             super().__init__(seed=45)
@@ -372,8 +477,6 @@ async def test_agenerate_obs_with_one_neighbor(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_async_wrapper_calls_pre_and_post(monkeypatch):
-    monkeypatch.setenv("GEMINI_API_KEY", "dummy")
-
     class CustomAgent(LLMAgent):
         async def astep(self):
             self.user_called = True
@@ -437,7 +540,6 @@ def _make_agent(model, vision=0, internal_state=None):
 
 def test_safer_cell_access_agent_with_cell_no_pos(monkeypatch):
     """Agent location falls back to cell.coordinate when pos=None."""
-    monkeypatch.setenv("GEMINI_API_KEY", "dummy")
     model = Model(seed=42)
     agent = _make_agent(model)
     agent.pos = None
@@ -451,7 +553,6 @@ def test_safer_cell_access_agent_with_cell_no_pos(monkeypatch):
 
 def test_safer_cell_access_agent_without_cell_or_pos(monkeypatch):
     """Agent location returns None gracefully when neither pos nor cell exists."""
-    monkeypatch.setenv("GEMINI_API_KEY", "dummy")
     model = Model(seed=42)
     agent = _make_agent(model)
     agent.pos = None
@@ -466,7 +567,6 @@ def test_safer_cell_access_agent_without_cell_or_pos(monkeypatch):
 
 def test_safer_cell_access_neighbor_with_cell_no_pos(monkeypatch):
     """Neighbor position uses cell.coordinate when neighbor.pos=None."""
-    monkeypatch.setenv("GEMINI_API_KEY", "dummy")
 
     class GridModel(Model):
         def __init__(self):
@@ -500,7 +600,6 @@ def test_safer_cell_access_neighbor_with_cell_no_pos(monkeypatch):
 
 def test_safer_cell_access_neighbor_without_cell_or_pos(monkeypatch):
     """Neighbor position returns None when neighbor has neither pos nor cell."""
-    monkeypatch.setenv("GEMINI_API_KEY", "dummy")
 
     class GridModel(Model):
         def __init__(self):
@@ -535,7 +634,6 @@ def test_safer_cell_access_neighbor_without_cell_or_pos(monkeypatch):
 
 def test_generate_obs_with_continuous_space(monkeypatch):
     """Agents within vision radius are included; those outside are not."""
-    monkeypatch.setenv("GEMINI_API_KEY", "dummy")
 
     class ContModel(Model):
         def __init__(self):
@@ -572,7 +670,6 @@ def test_generate_obs_with_continuous_space(monkeypatch):
 
 def test_generate_obs_vision_all_agents(monkeypatch):
     """vision=-1 returns all other agents regardless of position."""
-    monkeypatch.setenv("GEMINI_API_KEY", "dummy")
 
     class GridModel(Model):
         def __init__(self):
@@ -606,7 +703,6 @@ def test_generate_obs_vision_all_agents(monkeypatch):
 
 def test_generate_obs_no_grid_with_vision(monkeypatch):
     """When the model has no grid/space, generate_obs falls back to empty neighbors."""
-    monkeypatch.setenv("GEMINI_API_KEY", "dummy")
     model = Model(seed=42)  # no grid, no space
     agents = LLMAgent.create_agents(
         model,
@@ -636,7 +732,6 @@ def test_generate_obs_standard_grid_with_vision_radius(monkeypatch):
     - The observation includes nearby agents in local_state.
     - The SingleGrid neighbor lookup branch is executed.
     """
-    monkeypatch.setenv("GEMINI_API_KEY", "dummy")
 
     class GridModel(Model):
         def __init__(self):
@@ -672,7 +767,6 @@ def test_generate_obs_orthogonal_grid_branches(monkeypatch):
     Covers Orthogonal grid-specific branches including
     cell-based lookup and fallback behavior.
     """
-    monkeypatch.setenv("GEMINI_API_KEY", "dummy")
 
     class OrthoModel(Model):
         def __init__(self):
@@ -699,3 +793,164 @@ def test_generate_obs_orthogonal_grid_branches(monkeypatch):
     obs = agent.generate_obs()
 
     assert len(obs.local_state) == 0
+
+
+def test_generate_obs_with_non_llm_neighbor(monkeypatch):
+    """
+    _build_observation should work when a neighbor is a plain Mesa Agent
+    that has no internal_state attribute (e.g. a rule-based agent in a mixed sim).
+    """
+    monkeypatch.setenv("GEMINI_API_KEY", "dummy")
+
+    class PlainAgent(Agent):
+        """A regular Mesa agent with NO internal_state, simulates non-LLM agents."""
+
+        def step(self):
+            pass
+
+    class MixedModel(Model):
+        def __init__(self):
+            super().__init__(seed=42)
+            self.grid = MultiGrid(5, 5, torus=False)
+
+    model = MixedModel()
+    llm_agent = LLMAgent(model=model, reasoning=ReActReasoning, vision=-1)
+    plain = PlainAgent(model=model)
+
+    model.grid.place_agent(llm_agent, (2, 2))
+    model.grid.place_agent(plain, (3, 3))
+
+    monkeypatch.setattr(llm_agent.memory, "add_to_memory", lambda *a, **kw: None)
+
+    obs = llm_agent.generate_obs()
+
+    plain_key = f"PlainAgent {plain.unique_id}"
+    assert plain_key in obs.local_state
+    # Non-LLM agent should have an empty internal_state
+    assert obs.local_state[plain_key]["internal_state"] == []
+
+
+@pytest.mark.asyncio
+async def test_agenerate_obs_with_non_llm_neighbor(monkeypatch):
+    """
+    Async path shares _build_observation, must work for agenerate_obs().
+    """
+    monkeypatch.setenv("GEMINI_API_KEY", "dummy")
+
+    class PlainAgent(Agent):
+        def step(self):
+            pass
+
+    class MixedModel(Model):
+        def __init__(self):
+            super().__init__(seed=42)
+            self.grid = MultiGrid(5, 5, torus=False)
+
+    model = MixedModel()
+    llm_agent = LLMAgent(model=model, reasoning=ReActReasoning, vision=-1)
+    plain = PlainAgent(model=model)
+
+    model.grid.place_agent(llm_agent, (2, 2))
+    model.grid.place_agent(plain, (3, 3))
+
+    async def fake_aadd_to_memory(*args, **kwargs):
+        pass
+
+    monkeypatch.setattr(llm_agent.memory, "aadd_to_memory", fake_aadd_to_memory)
+
+    obs = await llm_agent.agenerate_obs()
+
+    plain_key = f"PlainAgent {plain.unique_id}"
+    assert plain_key in obs.local_state
+    assert obs.local_state[plain_key]["internal_state"] == []
+
+
+# ---------------------------------------------------------------------------
+# send_message / asend_message - store unique_ids, not Agent objects (#156)
+# ---------------------------------------------------------------------------
+
+
+def _make_send_message_model(monkeypatch):
+    """Shared setup: two-agent MultiGrid model with ShortTermMemory."""
+    monkeypatch.setenv("GEMINI_API_KEY", "dummy")
+
+    class DummyModel(Model):
+        def __init__(self):
+            super().__init__(seed=45)
+            self.grid = MultiGrid(3, 3, torus=False)
+
+        def add_agent(self, pos):
+            agents = LLMAgent.create_agents(
+                self,
+                n=1,
+                reasoning=lambda agent: None,
+                system_prompt="Test",
+                vision=-1,
+                internal_state=[],
+            )
+            agent = agents.to_list()[0]
+            self.grid.place_agent(agent, pos)
+            return agent
+
+    model = DummyModel()
+
+    sender = model.add_agent((0, 0))
+    sender.memory = ShortTermMemory(agent=sender, n=5, display=True)
+    sender.unique_id = 10
+
+    recipient = model.add_agent((1, 1))
+    recipient.memory = ShortTermMemory(agent=recipient, n=5, display=True)
+    recipient.unique_id = 20
+
+    return sender, recipient
+
+
+def test_send_message_stores_serializable_ids(monkeypatch):
+    """send_message stores sender/recipients as unique_ids, not Agent objects."""
+    sender, recipient = _make_send_message_model(monkeypatch)
+
+    captured = {}
+
+    def capture_content(type, content):
+        captured.update(content)
+
+    monkeypatch.setattr(recipient.memory, "add_to_memory", capture_content)
+    monkeypatch.setattr(sender.memory, "add_to_memory", lambda *a, **kw: None)
+
+    sender.send_message("hello", recipients=[recipient])
+
+    assert captured["sender"] == 10
+    assert captured["recipients"] == [20]
+    assert captured["message"] == "hello"
+
+    # Must not raise TypeError when serializing
+    data = json.loads(json.dumps(captured))
+    assert data["sender"] == 10
+    assert data["recipients"] == [20]
+
+
+@pytest.mark.asyncio
+async def test_asend_message_stores_serializable_ids(monkeypatch):
+    """asend_message stores sender/recipients as unique_ids, not Agent objects."""
+    sender, recipient = _make_send_message_model(monkeypatch)
+
+    captured = {}
+
+    async def capture_content(type, content):
+        captured.update(content)
+
+    async def noop(*a, **kw):
+        pass
+
+    monkeypatch.setattr(recipient.memory, "aadd_to_memory", capture_content)
+    monkeypatch.setattr(sender.memory, "aadd_to_memory", noop)
+
+    await sender.asend_message("hello", recipients=[recipient])
+
+    assert captured["sender"] == 10
+    assert captured["recipients"] == [20]
+    assert captured["message"] == "hello"
+
+    data = json.loads(json.dumps(captured))
+    assert data["sender"] == 10
+    assert data["recipients"] == [20]

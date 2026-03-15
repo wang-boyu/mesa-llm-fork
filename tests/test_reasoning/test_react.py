@@ -26,16 +26,14 @@ class TestReActOutput:
 class TestReActReasoning:
     """Test the ReActReasoning class."""
 
-    def test_react_reasoning_initialization(self):
+    def test_react_reasoning_initialization(self, mock_agent):
         """Test ReActReasoning initialization."""
-        mock_agent = Mock()
         reasoning = ReActReasoning(mock_agent)
 
         assert reasoning.agent == mock_agent
 
-    def test_get_react_system_prompt(self):
+    def test_get_react_system_prompt(self, mock_agent):
         """Test get_react_system_prompt method."""
-        mock_agent = Mock()
         reasoning = ReActReasoning(mock_agent)
 
         prompt = reasoning.get_react_system_prompt()
@@ -43,9 +41,8 @@ class TestReActReasoning:
         assert "reasoning:" in prompt
         assert "action:" in prompt
 
-    def test_get_react_prompt_with_observation(self):
+    def test_get_react_prompt_with_observation(self, mock_agent):
         """Test get_react_prompt with observation."""
-        mock_agent = Mock()
         mock_agent.memory = Mock()
         mock_agent.memory.get_prompt_ready.return_value = "memory1\n\nmemory2"
         mock_agent.memory.get_communication_history.return_value = "communication"
@@ -59,9 +56,8 @@ class TestReActReasoning:
         assert "current observation" in prompt_list[-1]
         assert "last communication" in prompt_list[-2]
 
-    def test_get_react_prompt_without_observation(self):
+    def test_get_react_prompt_without_observation(self, mock_agent):
         """Test get_react_prompt without observation."""
-        mock_agent = Mock()
         mock_agent.memory = Mock()
         mock_agent.memory.get_prompt_ready.return_value = "memory1"
         mock_agent.memory.get_communication_history.return_value = ""
@@ -73,9 +69,8 @@ class TestReActReasoning:
         assert len(prompt_list) >= 1
         assert "last communication" not in prompt_list[-1]
 
-    def test_plan_with_prompt(self):
+    def test_plan_with_prompt(self, llm_response_factory, mock_agent):
         """Test plan method with custom prompt."""
-        mock_agent = Mock()
         mock_agent.memory = Mock()
         mock_agent.memory.get_prompt_ready.return_value = "memory1"
         mock_agent.memory.get_communication_history.return_value = ""
@@ -84,13 +79,11 @@ class TestReActReasoning:
         mock_agent.tool_manager = Mock()
         mock_agent.tool_manager.get_all_tools_schema.return_value = {}
 
-        # Mock the LLM response
-        mock_response = Mock()
-        mock_response.choices = [Mock()]
-        mock_response.choices[0].message.content = json.dumps(
-            {"reasoning": "Custom reasoning", "action": "custom_action"}
+        mock_agent.llm.generate.return_value = llm_response_factory(
+            content=json.dumps(
+                {"reasoning": "Custom reasoning", "action": "custom_action"}
+            )
         )
-        mock_agent.llm.generate.return_value = mock_response
 
         # Mock execute_tool_call
         mock_plan = Plan(step=1, llm_plan=Mock())
@@ -107,9 +100,8 @@ class TestReActReasoning:
             ttl=1,
         )
 
-    def test_plan_with_selected_tools(self):
+    def test_plan_with_selected_tools(self, llm_response_factory, mock_agent):
         """Test plan method with selected tools."""
-        mock_agent = Mock()
         mock_agent.step_prompt = "Default step prompt"
         mock_agent.memory = Mock()
         mock_agent.memory.get_prompt_ready.return_value = "memory1"
@@ -119,13 +111,9 @@ class TestReActReasoning:
         mock_agent.tool_manager = Mock()
         mock_agent.tool_manager.get_all_tools_schema.return_value = {}
 
-        # Mock the LLM response
-        mock_response = Mock()
-        mock_response.choices = [Mock()]
-        mock_response.choices[0].message.content = json.dumps(
-            {"reasoning": "Test reasoning", "action": "test_action"}
+        mock_agent.llm.generate.return_value = llm_response_factory(
+            content=json.dumps({"reasoning": "Test reasoning", "action": "test_action"})
         )
-        mock_agent.llm.generate.return_value = mock_response
 
         # Mock execute_tool_call
         mock_plan = Plan(step=1, llm_plan=Mock())
@@ -144,9 +132,8 @@ class TestReActReasoning:
             ttl=3,
         )
 
-    def test_plan_no_prompt_error(self):
+    def test_plan_no_prompt_error(self, mock_agent):
         """Test plan method raises error when no prompt is provided."""
-        mock_agent = Mock()
         mock_agent.step_prompt = None
         mock_agent.memory = Mock()
         mock_agent.memory.get_prompt_ready.return_value = "memory1"
@@ -160,9 +147,8 @@ class TestReActReasoning:
         ):
             reasoning.plan(obs=obs)
 
-    def test_aplan_async_version(self):
+    def test_aplan_async_version(self, llm_response_factory, mock_agent):
         """Test aplan async method."""
-        mock_agent = Mock()
         mock_agent.step_prompt = "Default step prompt"
         mock_agent.memory = Mock()
         mock_agent.memory.get_prompt_ready.return_value = "memory1"
@@ -173,13 +159,13 @@ class TestReActReasoning:
         mock_agent.tool_manager = Mock()
         mock_agent.tool_manager.get_all_tools_schema.return_value = {}
 
-        # Mock the async LLM response
-        mock_response = Mock()
-        mock_response.choices = [Mock()]
-        mock_response.choices[0].message.content = json.dumps(
-            {"reasoning": "Async reasoning", "action": "async_action"}
+        mock_agent.llm.agenerate = AsyncMock(
+            return_value=llm_response_factory(
+                content=json.dumps(
+                    {"reasoning": "Async reasoning", "action": "async_action"}
+                )
+            )
         )
-        mock_agent.llm.agenerate = AsyncMock(return_value=mock_response)
 
         # Mock aexecute_tool_call
         mock_plan = Plan(step=1, llm_plan=Mock())
@@ -199,9 +185,8 @@ class TestReActReasoning:
             ttl=4,
         )
 
-    def test_aplan_no_prompt_error(self):
+    def test_aplan_no_prompt_error(self, mock_agent):
         """Test aplan method raises error when no prompt is provided."""
-        mock_agent = Mock()
         mock_agent.step_prompt = None
         mock_agent.memory = Mock()
         mock_agent.memory.get_prompt_ready.return_value = "memory1"
