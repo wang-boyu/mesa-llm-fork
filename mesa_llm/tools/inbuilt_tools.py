@@ -227,7 +227,6 @@ def speak_to(
             content={
                 "message": message,
                 "sender": agent.unique_id,
-                "recipients": delivered_ids,
             },
         )
 

@@ -171,8 +171,7 @@ def test_speak_to_records_on_recipients(mocker):
     content = kwargs["content"]
     assert content["message"] == message
     assert content["sender"] == sender.unique_id
-    assert set(content["recipients"]) == {11, 12}
-
+    assert "recipients" not in content
     assert ret == "sent message 'Hello there' to [11, 12]"
 
 
@@ -607,7 +606,7 @@ def test_speak_to_skips_non_llm_recipient(mocker):
     call_kwargs = llm_recipient.memory.add_to_memory.call_args[1]
     assert call_kwargs["type"] == "message"
     assert call_kwargs["content"]["message"] == "Hello both"
-    assert call_kwargs["content"]["recipients"] == [2]
+    assert "recipients" not in call_kwargs["content"]
 
     assert ret == (
         "sent message 'Hello both' to [2]; skipped [3] because they have no `memory` attribute"
