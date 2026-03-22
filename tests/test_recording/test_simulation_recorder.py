@@ -311,7 +311,9 @@ class TestSimulationRecorder:
         with open(filepath2) as f:
             data = json.load(f)
 
-        simulation_end_events = [e for e in data["events"] if e["event_type"] == "simulation_end"]
+        simulation_end_events = [
+            e for e in data["events"] if e["event_type"] == "simulation_end"
+        ]
         assert len(simulation_end_events) == 1
 
     def test_get_stats(self, recorder, mock_model):
