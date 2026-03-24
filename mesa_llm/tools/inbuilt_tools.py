@@ -218,4 +218,4 @@ def speak_to(
                 ],
             },
         )
-    return f"{agent.unique_id} → {[agent.unique_id for agent in listener_agents]} : {message}"
+    return f"{agent.unique_id} → {[listener.unique_id for listener in listener_agents]} : {message}"
