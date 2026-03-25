@@ -974,6 +974,25 @@ def test_send_message_stores_serializable_ids(monkeypatch):
     assert data["message"] == "hello"
 
 
+# ---------------------------------------------------------------------------
+# recorder attribute initialised to None (#218)
+# ---------------------------------------------------------------------------
+
+
+def test_llm_agent_has_recorder_attribute():
+    """LLMAgent instances must expose a `recorder` attribute so that
+    @record_model can attach a SimulationRecorder via hasattr()."""
+    model = Model(rng=42)
+    agent = LLMAgent(
+        model=model,
+        reasoning=ReActReasoning,
+        system_prompt="test",
+    )
+
+    assert hasattr(agent, "recorder")
+    assert agent.recorder is None
+
+
 @pytest.mark.asyncio
 async def test_asend_message_stores_serializable_ids(monkeypatch):
     """asend_message stores sender/recipients as unique_ids, not Agent objects."""

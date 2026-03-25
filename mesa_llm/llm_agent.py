@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import logging
 import warnings
+from typing import TYPE_CHECKING
 
 from mesa.agent import Agent
 from mesa.discrete_space import (
@@ -23,6 +26,9 @@ from mesa_llm.reasoning.reasoning import (
 from mesa_llm.tools.tool_manager import ToolManager
 
 logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:  # pragma: no cover
+    from mesa_llm.recording.simulation_recorder import SimulationRecorder
 
 
 class LLMAgent(Agent):
@@ -85,6 +91,9 @@ class LLMAgent(Agent):
 
         # display coordination
         self._step_display_data = {}
+
+        # Placeholder so @record_model can attach the SimulationRecorder
+        self.recorder: SimulationRecorder | None = None
 
         if isinstance(internal_state, str):
             internal_state = [internal_state]
