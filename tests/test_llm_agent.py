@@ -276,22 +276,109 @@ def test_send_message_updates_both_agents_memory(monkeypatch):
     )
     recipient.unique_id = 2
 
-    # Track how many times add_to_memory is called
-    call_counter = {"count": 0}
+    recorded_calls = []
 
     def fake_add_to_memory(*args, **kwargs):
-        call_counter["count"] += 1
+        recorded_calls.append(("sender", kwargs))
+
+    def fake_recipient_add_to_memory(*args, **kwargs):
+        recorded_calls.append(("recipient", kwargs))
 
     # monkeypatch both agents' memory modules
     monkeypatch.setattr(sender.memory, "add_to_memory", fake_add_to_memory)
-    monkeypatch.setattr(recipient.memory, "add_to_memory", fake_add_to_memory)
+    monkeypatch.setattr(recipient.memory, "add_to_memory", fake_recipient_add_to_memory)
 
     result = sender.send_message("hello", recipients=[recipient])
     pattern = r"LLMAgent 1 → \[<mesa_llm\.llm_agent\.LLMAgent object at 0x[0-9A-Fa-f]+>\] : hello"
     assert re.match(pattern, result)
 
     # sender + recipient memory => should be called twice
-    assert call_counter["count"] == 2
+    assert len(recorded_calls) == 2
+    sender_call = next(call for label, call in recorded_calls if label == "sender")
+    recipient_call = next(
+        call for label, call in recorded_calls if label == "recipient"
+    )
+    assert sender_call["type"] == "message"
+    assert sender_call["content"]["message"] == "hello"
+    assert sender_call["content"]["sender"] == sender.unique_id
+    assert sender_call["content"]["recipients"] == [recipient.unique_id]
+    assert recipient_call["type"] == "message"
+    assert recipient_call["content"]["message"] == "hello"
+    assert recipient_call["content"]["sender"] == sender.unique_id
+    assert "recipients" not in recipient_call["content"]
+
+
+@pytest.mark.asyncio
+async def test_asend_message_updates_both_agents_memory(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "dummy")
+
+    class DummyModel(Model):
+        def __init__(self):
+            super().__init__(seed=45)
+            self.grid = MultiGrid(3, 3, torus=False)
+
+        def add_agent(self, pos, agent_class=LLMAgent):
+            system_prompt = "You are an agent in a simulation."
+            agents = agent_class.create_agents(
+                self,
+                n=1,
+                reasoning=lambda agent: None,
+                system_prompt=system_prompt,
+                vision=-1,
+                internal_state=["test_state"],
+            )
+            x, y = pos
+            agent = agents.to_list()[0]
+            self.grid.place_agent(agent, (x, y))
+            return agent
+
+    model = DummyModel()
+    sender = model.add_agent((0, 0))
+    sender.memory = ShortTermMemory(
+        agent=sender,
+        n=5,
+        display=True,
+    )
+    sender.unique_id = 1
+
+    recipient = model.add_agent((1, 1))
+    recipient.memory = ShortTermMemory(
+        agent=recipient,
+        n=5,
+        display=True,
+    )
+    recipient.unique_id = 2
+
+    recorded_calls = []
+
+    async def fake_aadd_to_memory(*args, **kwargs):
+        recorded_calls.append(("sender", kwargs))
+
+    async def fake_recipient_aadd_to_memory(*args, **kwargs):
+        recorded_calls.append(("recipient", kwargs))
+
+    monkeypatch.setattr(sender.memory, "aadd_to_memory", fake_aadd_to_memory)
+    monkeypatch.setattr(
+        recipient.memory, "aadd_to_memory", fake_recipient_aadd_to_memory
+    )
+
+    result = await sender.asend_message("hello", recipients=[recipient])
+    pattern = r"LLMAgent 1 → \[<mesa_llm\.llm_agent\.LLMAgent object at 0x[0-9A-Fa-f]+>\] : hello"
+    assert re.match(pattern, result)
+
+    assert len(recorded_calls) == 2
+    sender_call = next(call for label, call in recorded_calls if label == "sender")
+    recipient_call = next(
+        call for label, call in recorded_calls if label == "recipient"
+    )
+    assert sender_call["type"] == "message"
+    assert sender_call["content"]["message"] == "hello"
+    assert sender_call["content"]["sender"] == sender.unique_id
+    assert sender_call["content"]["recipients"] == [recipient.unique_id]
+    assert recipient_call["type"] == "message"
+    assert recipient_call["content"]["message"] == "hello"
+    assert recipient_call["content"]["sender"] == sender.unique_id
+    assert "recipients" not in recipient_call["content"]
 
 
 @pytest.mark.asyncio
@@ -833,13 +920,13 @@ def test_send_message_stores_serializable_ids(monkeypatch):
     sender.send_message("hello", recipients=[recipient])
 
     assert captured["sender"] == 10
-    assert captured["recipients"] == [20]
     assert captured["message"] == "hello"
 
     # Must not raise TypeError when serializing
     data = json.loads(json.dumps(captured))
     assert data["sender"] == 10
-    assert data["recipients"] == [20]
+    assert "recipients" not in data  # recipients only stored in sender, not recipient
+    assert data["message"] == "hello"
 
 
 @pytest.mark.asyncio
@@ -861,9 +948,12 @@ async def test_asend_message_stores_serializable_ids(monkeypatch):
     await sender.asend_message("hello", recipients=[recipient])
 
     assert captured["sender"] == 10
-    assert captured["recipients"] == [20]
+    assert (
+        "recipients" not in captured
+    )  # recipients only stored in sender, not recipient
     assert captured["message"] == "hello"
 
     data = json.loads(json.dumps(captured))
     assert data["sender"] == 10
-    assert data["recipients"] == [20]
+    assert data["message"] == "hello"
+    assert "recipients" not in data

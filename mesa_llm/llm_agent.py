@@ -275,15 +275,22 @@ class LLMAgent(Agent):
         """
         Asynchronous version of send_message.
         """
-        for recipient in [*recipients, self]:
+        for recipient in recipients:
             await recipient.memory.aadd_to_memory(
                 type="message",
                 content={
                     "message": message,
                     "sender": self.unique_id,
-                    "recipients": [r.unique_id for r in recipients],
                 },
             )
+        await self.memory.aadd_to_memory(
+            type="message",
+            content={
+                "message": message,
+                "sender": self.unique_id,
+                "recipients": [r.unique_id for r in recipients],
+            },
+        )
 
         return f"{self} → {recipients} : {message}"
 
@@ -291,15 +298,22 @@ class LLMAgent(Agent):
         """
         Send a message to the recipients.
         """
-        for recipient in [*recipients, self]:
+        for recipient in recipients:
             recipient.memory.add_to_memory(
                 type="message",
                 content={
                     "message": message,
                     "sender": self.unique_id,
-                    "recipients": [r.unique_id for r in recipients],
                 },
             )
+        self.memory.add_to_memory(
+            type="message",
+            content={
+                "message": message,
+                "sender": self.unique_id,
+                "recipients": [r.unique_id for r in recipients],
+            },
+        )
 
         return f"{self} → {recipients} : {message}"
 
