@@ -208,8 +208,14 @@ def speak_to(
         try:
             listener_agents_unique_ids = json.loads(listener_agents_unique_ids)
         except (json.JSONDecodeError, ValueError):
-            listener_agents_unique_ids = [int(x.strip()) for x in listener_agents_unique_ids.strip("[]").split(",") if x.strip()]
-    listener_agents_unique_ids = [int(uid) for uid in (listener_agents_unique_ids or [])]
+            listener_agents_unique_ids = [
+                int(x.strip())
+                for x in listener_agents_unique_ids.strip("[]").split(",")
+                if x.strip()
+            ]
+    listener_agents_unique_ids = [
+        int(uid) for uid in (listener_agents_unique_ids or [])
+    ]
 
     listener_agents = [
         listener_agent
