@@ -502,6 +502,68 @@ class TestToolManager:
         assert result[0]["tool_call_id"] == "call_123"
         assert "Simple: test" in result[0]["response"]
 
+    def test_call_tools_type_coercion_float(self):
+        """Test coercion of float arguments passed as JSON strings."""
+        manager = ToolManager()
+
+        @tool
+        def float_tool(agent, amount: float) -> str:
+            """Float tool.
+            Args:
+                agent: The agent making the request
+                amount: Amount to format.
+            Returns:
+                Formatted amount.
+            """
+            return f"{amount:.2f}"
+
+        mock_agent = Mock()
+
+        mock_tool_call = Mock()
+        mock_tool_call.id = "call_float"
+        mock_tool_call.function.name = "float_tool"
+        mock_tool_call.function.arguments = '{"amount": "35.0"}'
+
+        mock_response = Mock()
+        mock_response.tool_calls = [mock_tool_call]
+
+        result = manager.call_tools(mock_agent, mock_response)
+
+        assert len(result) == 1
+        assert result[0]["tool_call_id"] == "call_float"
+        assert result[0]["response"] == "35.00"
+
+    def test_call_tools_type_coercion_int(self):
+        """Test coercion of int arguments passed as JSON strings."""
+        manager = ToolManager()
+
+        @tool
+        def int_tool(agent, count: int) -> int:
+            """Int tool.
+            Args:
+                agent: The agent making the request
+                count: Count to increment.
+            Returns:
+                Incremented count.
+            """
+            return count + 1
+
+        mock_agent = Mock()
+
+        mock_tool_call = Mock()
+        mock_tool_call.id = "call_int"
+        mock_tool_call.function.name = "int_tool"
+        mock_tool_call.function.arguments = '{"count": "5"}'
+
+        mock_response = Mock()
+        mock_response.tool_calls = [mock_tool_call]
+
+        result = manager.call_tools(mock_agent, mock_response)
+
+        assert len(result) == 1
+        assert result[0]["tool_call_id"] == "call_int"
+        assert result[0]["response"] == "6"
+
     def test_call_tools_no_response(self):
         """Test call_tools when tool returns None."""
         manager = ToolManager()

@@ -125,10 +125,25 @@ class ToolManager:
             sig = inspect.signature(function_to_call)
             expects_agent = "agent" in sig.parameters
 
-            # Filter arguments to only those accepted
-            filtered_args = {
-                k: v for k, v in function_args.items() if k in sig.parameters
-            }
+            # Filter arguments to only those accepted by the function, with type coercion based on annotations
+            try:
+                hints = function_to_call.__annotations__
+            except AttributeError:
+                hints = {}
+
+            _COERCE: dict[type, type] = {float: float, int: int}
+            filtered_args = {}
+            for k, v in function_args.items():
+                if k not in sig.parameters:
+                    continue
+                expected = hints.get(k)
+                coerce_fn = _COERCE.get(expected)
+                if coerce_fn is not None and not isinstance(v, expected):
+                    try:
+                        v = coerce_fn(v)
+                    except (ValueError, TypeError):
+                        pass 
+                filtered_args[k] = v
 
             if expects_agent:
                 filtered_args["agent"] = agent
