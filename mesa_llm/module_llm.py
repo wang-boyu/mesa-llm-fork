@@ -98,10 +98,9 @@ class ModuleLLM:
 
         # Always include a system message. Default to empty string if no system
         # prompt to support Ollama.
-        if system_prompt is None:
-            system_content = self.system_prompt if self.system_prompt else ""
-        else:
-            system_content = system_prompt
+        system_content = (
+            self.system_prompt if system_prompt is None else system_prompt
+        ) or ""
         messages.append({"role": "system", "content": system_content})
 
         if prompt:
