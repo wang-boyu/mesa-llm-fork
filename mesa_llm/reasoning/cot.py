@@ -130,12 +130,15 @@ class CoTReasoning(Reasoning):
         # Pass plan content to agent for display
         if hasattr(self.agent, "_step_display_data"):
             self.agent._step_display_data["plan_content"] = chaining_message
-        system_prompt = "You are an executor that executes the plan given to you in the prompt through tool calls."
+        system_prompt = (
+            "You are an executor that executes the plan given to you in the prompt through tool calls. "
+            "If the plan concludes that no action should be taken, do not call any tool."
+        )
         llm.system_prompt = system_prompt
         rsp = llm.generate(
             prompt=chaining_message,
             tool_schema=self.agent.tool_manager.get_all_tools_schema(selected_tools),
-            tool_choice="required",
+            tool_choice="auto",
         )
         response_message = rsp.choices[0].message
         cot_plan = Plan(step=step, llm_plan=response_message, ttl=ttl)
@@ -190,12 +193,15 @@ class CoTReasoning(Reasoning):
         # Pass plan content to agent for display
         if hasattr(self.agent, "_step_display_data"):
             self.agent._step_display_data["plan_content"] = chaining_message
-        system_prompt = "You are an executor that executes the plan given to you in the prompt through tool calls."
+        system_prompt = (
+            "You are an executor that executes the plan given to you in the prompt through tool calls. "
+            "If the plan concludes that no action should be taken, do not call any tool."
+        )
         llm.system_prompt = system_prompt
         rsp = await llm.agenerate(
             prompt=chaining_message,
             tool_schema=self.agent.tool_manager.get_all_tools_schema(selected_tools),
-            tool_choice="required",
+            tool_choice="auto",
         )
         response_message = rsp.choices[0].message
         cot_plan = Plan(step=step, llm_plan=response_message, ttl=ttl)

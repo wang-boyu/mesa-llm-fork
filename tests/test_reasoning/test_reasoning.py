@@ -74,7 +74,7 @@ class TestReasoningBase:
         mock_agent.llm.generate.assert_called_once_with(
             prompt=chaining_message,
             tool_schema=[{"schema": "example"}],
-            tool_choice="required",
+            tool_choice="auto",
         )
         # Assert that the tool manager was asked for the correct schema
         mock_agent.tool_manager.get_all_tools_schema.assert_called_once_with(

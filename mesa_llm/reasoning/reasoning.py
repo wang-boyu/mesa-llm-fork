@@ -110,14 +110,17 @@ class Reasoning(ABC):
         selected_tools: list[str] | None = None,
         ttl: int = 1,
     ):
-        system_prompt = "You are an executor that executes the plan given to you in the prompt through tool calls."
+        system_prompt = (
+            "You are an executor that executes the plan given to you in the prompt through tool calls. "
+            "If the plan concludes that no action should be taken, do not call any tool."
+        )
         self.agent.llm.system_prompt = system_prompt
         rsp = self.agent.llm.generate(
             prompt=chaining_message,
             tool_schema=self.agent.tool_manager.get_all_tools_schema(
                 selected_tools=selected_tools
             ),
-            tool_choice="required",
+            tool_choice="auto",
         )
         response_message = rsp.choices[0].message
         plan = Plan(step=self.agent.model.steps, llm_plan=response_message, ttl=ttl)
@@ -133,14 +136,17 @@ class Reasoning(ABC):
         """
         Asynchronous version of execute_tool_call() method.
         """
-        system_prompt = "You are an executor that executes the plan given to you in the prompt through tool calls."
+        system_prompt = (
+            "You are an executor that executes the plan given to you in the prompt through tool calls. "
+            "If the plan concludes that no action should be taken, do not call any tool."
+        )
         self.agent.llm.system_prompt = system_prompt
         rsp = await self.agent.llm.agenerate(
             prompt=chaining_message,
             tool_schema=self.agent.tool_manager.get_all_tools_schema(
                 selected_tools=selected_tools
             ),
-            tool_choice="required",
+            tool_choice="auto",
         )
         response_message = rsp.choices[0].message
         plan = Plan(step=self.agent.model.steps, llm_plan=response_message, ttl=ttl)
