@@ -174,7 +174,9 @@ class TestShortTermMemory:
         memory = ShortTermMemory(agent=mock_agent, display=False)
 
         entry = MemoryEntry(
-            content={"message": {"message": "status update", "sender": 12, "recipients": [3]}},
+            content={
+                "message": {"message": "status update", "sender": 12, "recipients": [3]}
+            },
             step=7,
             agent=mock_agent,
         )
@@ -196,7 +198,9 @@ class TestShortTermMemory:
             agent=mock_agent,
         )
         entry_msg = MemoryEntry(
-            content={"message": {"message": "over here", "sender": 2, "recipients": []}},
+            content={
+                "message": {"message": "over here", "sender": 2, "recipients": []}
+            },
             step=2,
             agent=mock_agent,
         )
@@ -207,7 +211,9 @@ class TestShortTermMemory:
         assert "over here" in history
         assert "watching" not in history
 
-    def test_get_communication_history_returns_empty_string_when_no_messages(self, mock_agent):
+    def test_get_communication_history_returns_empty_string_when_no_messages(
+        self, mock_agent
+    ):
         """Returns empty string when no entries contain a 'message' key."""
         memory = ShortTermMemory(agent=mock_agent, display=False)
 

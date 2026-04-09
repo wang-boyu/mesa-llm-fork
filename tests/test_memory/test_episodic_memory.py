@@ -353,7 +353,13 @@ class TestEpisodicMemory:
 
         # Simulate what _finalize_entry produces after speak_to + importance grading
         entry = MemoryEntry(
-            content={"message": {"message": "meet me at the north", "sender": 7, "importance": 3}},
+            content={
+                "message": {
+                    "message": "meet me at the north",
+                    "sender": 7,
+                    "importance": 3,
+                }
+            },
             step=5,
             agent=episodic_mock_agent,
         )
@@ -366,7 +372,9 @@ class TestEpisodicMemory:
         # Must not expose raw dict representation
         assert "{'message'" not in history
 
-    def test_get_communication_history_skips_non_message_entries(self, episodic_mock_agent):
+    def test_get_communication_history_skips_non_message_entries(
+        self, episodic_mock_agent
+    ):
         """Entries without a 'message' key must not appear in communication history."""
         memory = EpisodicMemory(
             agent=episodic_mock_agent, llm_model="provider/test_model"

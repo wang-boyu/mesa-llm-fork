@@ -349,7 +349,13 @@ class TestSTLTMemory:
         memory = STLTMemory(agent=mock_agent, llm_model="provider/test_model")
 
         entry = MemoryEntry(
-            content={"message": {"message": "regroup at base", "sender": 3, "recipients": [1, 2]}},
+            content={
+                "message": {
+                    "message": "regroup at base",
+                    "sender": 3,
+                    "recipients": [1, 2],
+                }
+            },
             step=10,
             agent=mock_agent,
         )
@@ -371,7 +377,9 @@ class TestSTLTMemory:
             agent=mock_agent,
         )
         entry_msg = MemoryEntry(
-            content={"message": {"message": "all clear", "sender": 9, "recipients": []}},
+            content={
+                "message": {"message": "all clear", "sender": 9, "recipients": []}
+            },
             step=2,
             agent=mock_agent,
         )
@@ -382,7 +390,9 @@ class TestSTLTMemory:
         assert "all clear" in history
         assert "position" not in history
 
-    def test_get_communication_history_returns_empty_string_when_no_messages(self, mock_agent):
+    def test_get_communication_history_returns_empty_string_when_no_messages(
+        self, mock_agent
+    ):
         """Returns an empty string when short-term memory has no message entries."""
         memory = STLTMemory(agent=mock_agent, llm_model="provider/test_model")
 
