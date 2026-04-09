@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from pydantic import BaseModel
 
-from mesa_llm.memory.memory import Memory, MemoryEntry
+from mesa_llm.memory.memory import Memory, MemoryEntry, _format_message_entry
 
 if TYPE_CHECKING:
     from mesa_llm.llm_agent import LLMAgent
@@ -259,7 +259,7 @@ class EpisodicMemory(Memory):
         """
         return "\n".join(
             [
-                f"step {entry.step}: {entry.content['message']}\n\n"
+                f"step {entry.step}: {_format_message_entry(entry.content['message'])}\n\n"
                 for entry in self.memory_entries
                 if "message" in entry.content
             ]
