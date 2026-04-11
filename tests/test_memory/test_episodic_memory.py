@@ -325,13 +325,7 @@ class TestEpisodicMemory:
         memory.memory_entries.append(entry_without_message)
 
         history = memory.get_communication_history()
-
-        # assertion checks must return true
-        assert "Hello" in history
-        assert "step 1" in history
-        assert (
-            "No message here" not in history
-        )  # step 2  does not have message field thus it must not be present in the returned string
+        assert history == "Step 1: Hello\n\n"
 
     def test_get_communication_history_nested_dict(self, episodic_mock_agent):
         """
@@ -367,10 +361,7 @@ class TestEpisodicMemory:
 
         history = memory.get_communication_history()
 
-        assert "Agent 7 says: meet me at the north" in history
-        assert "step 5" in history
-        # Must not expose raw dict representation
-        assert "{'message'" not in history
+        assert history == "Step 5: Agent 7 says: meet me at the north\n\n"
 
     def test_get_communication_history_skips_non_message_entries(
         self, episodic_mock_agent
@@ -393,9 +384,7 @@ class TestEpisodicMemory:
         memory.memory_entries.extend([entry_obs, entry_msg])
 
         history = memory.get_communication_history()
-
-        assert "hello" in history
-        assert "position" not in history
+        assert history == "Step 4: Agent 1 says: hello\n\n"
 
     def test_retrieve_empty_memory(self, mock_agent):
         """

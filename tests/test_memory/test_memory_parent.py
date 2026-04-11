@@ -76,9 +76,18 @@ class TestMemoryEntry:
 
 class MemoryMock(Memory):
     def __init__(
-        self, agent: "LLMAgent", llm_model: str | None = None, display: bool = True
+        self,
+        agent: "LLMAgent",
+        llm_model: str | None = None,
+        display: bool = True,
+        additive_event_types: list[str] | set[str] | tuple[str, ...] | None = None,
     ):
-        super().__init__(agent, llm_model, display)
+        super().__init__(
+            agent,
+            llm_model,
+            display,
+            additive_event_types=additive_event_types,
+        )
 
     def get_prompt_ready(self) -> str:
         return ""
@@ -104,7 +113,7 @@ class TestMemoryParent:
         # Parameters init
         assert memory.display
         assert memory.step_content == {}
-        assert memory.last_observation == {}
+        assert memory.additive_event_types == {"message", "action"}
 
         # llm init with ModuleLLM
         assert isinstance(memory.llm, ModuleLLM)
@@ -112,6 +121,22 @@ class TestMemoryParent:
 
         memory = MemoryMock(agent=mock_agent)
         assert not hasattr(memory, "llm")
+
+    def test_memory_init_custom_additive_event_types(self):
+        """Custom additive event types should be configurable per memory."""
+        mock_agent = Mock()
+        memory = MemoryMock(
+            agent=mock_agent, additive_event_types=["message", "observation"]
+        )
+
+        assert memory.additive_event_types == {"message", "observation"}
+
+    def test_memory_init_empty_additive_event_types(self):
+        """An explicit empty additive config should stay empty."""
+        mock_agent = Mock()
+        memory = MemoryMock(agent=mock_agent, additive_event_types=[])
+
+        assert memory.additive_event_types == set()
 
     def test_add_to_memory(self, mock_agent):
         memory = MemoryMock(agent=mock_agent)

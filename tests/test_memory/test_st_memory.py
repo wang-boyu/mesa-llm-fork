@@ -183,10 +183,7 @@ class TestShortTermMemory:
         memory.short_term_memory.append(entry)
 
         history = memory.get_communication_history()
-
-        assert "Agent 12 says: status update" in history
-        assert "step 7" in history
-        assert "{'message'" not in history
+        assert history == "Step 7: Agent 12 says: status update\n\n"
 
     def test_get_communication_history_skips_non_message_entries(self, mock_agent):
         """Entries without a 'message' key are excluded from communication history."""
