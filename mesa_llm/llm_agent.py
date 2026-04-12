@@ -1,3 +1,5 @@
+import logging
+
 from mesa.agent import Agent
 from mesa.discrete_space import (
     OrthogonalMooreGrid,
@@ -18,6 +20,8 @@ from mesa_llm.reasoning.reasoning import (
     Reasoning,
 )
 from mesa_llm.tools.tool_manager import ToolManager
+
+logger = logging.getLogger(__name__)
 
 
 class LLMAgent(Agent):
@@ -90,6 +94,21 @@ class LLMAgent(Agent):
 
     def __str__(self):
         return f"LLMAgent {self.unique_id}"
+
+    def _format_message_status(
+        self, message: str, delivered_ids: list[int], skipped_ids: list[int]
+    ) -> str:
+        """Format direct-message delivery status to match the speak_to tool."""
+        status_parts = []
+        if delivered_ids:
+            status_parts.append(f"sent message {message!r} to {delivered_ids}")
+        if skipped_ids:
+            status_parts.append(
+                f"skipped {skipped_ids} because they have no `memory` attribute"
+            )
+        if not status_parts:
+            return f"Could not send message {message!r}: no matching recipients found."
+        return "; ".join(status_parts)
 
     async def aapply_plan(self, plan: Plan) -> list[dict]:
         """
@@ -278,12 +297,20 @@ class LLMAgent(Agent):
         """
         Asynchronous version of send_message.
         """
-        recipient_ids = [r.unique_id for r in recipients]
+        delivered_ids = []
+        skipped_ids = []
         for recipient in recipients:
-            memory = getattr(recipient, "memory", None)
-            if memory is None:
+            if recipient is self:
                 continue
-            await memory.aadd_to_memory(
+            if not hasattr(recipient, "memory"):
+                skipped_ids.append(recipient.unique_id)
+                logger.warning(
+                    "Agent %s has no memory attribute; skipping send_message.",
+                    recipient.unique_id,
+                )
+                continue
+            delivered_ids.append(recipient.unique_id)
+            await recipient.memory.aadd_to_memory(
                 type="message",
                 content={
                     "message": message,
@@ -295,21 +322,29 @@ class LLMAgent(Agent):
             content={
                 "message": message,
                 "sender": self.unique_id,
-                "recipients": recipient_ids,
+                "recipients": delivered_ids,
             },
         )
-        return f"{self.unique_id} → {recipient_ids} : {message}"
+        return self._format_message_status(message, delivered_ids, skipped_ids)
 
     def send_message(self, message: str, recipients: list[Agent]) -> str:
         """
         Send a message to the recipients.
         """
-        recipient_ids = [r.unique_id for r in recipients]
+        delivered_ids = []
+        skipped_ids = []
         for recipient in recipients:
-            memory = getattr(recipient, "memory", None)
-            if memory is None:
+            if recipient is self:
                 continue
-            memory.add_to_memory(
+            if not hasattr(recipient, "memory"):
+                skipped_ids.append(recipient.unique_id)
+                logger.warning(
+                    "Agent %s has no memory attribute; skipping send_message.",
+                    recipient.unique_id,
+                )
+                continue
+            delivered_ids.append(recipient.unique_id)
+            recipient.memory.add_to_memory(
                 type="message",
                 content={
                     "message": message,
@@ -321,10 +356,10 @@ class LLMAgent(Agent):
             content={
                 "message": message,
                 "sender": self.unique_id,
-                "recipients": recipient_ids,
+                "recipients": delivered_ids,
             },
         )
-        return f"{self.unique_id} → {recipient_ids} : {message}"
+        return self._format_message_status(message, delivered_ids, skipped_ids)
 
     async def apre_step(self):
         """

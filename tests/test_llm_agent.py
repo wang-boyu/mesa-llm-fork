@@ -1,7 +1,7 @@
 # tests/test_llm_agent.py
 
 import json
-import re
+import logging
 
 import pytest
 from mesa.agent import Agent
@@ -295,8 +295,7 @@ def test_send_message_updates_both_agents_memory(monkeypatch):
     monkeypatch.setattr(recipient.memory, "add_to_memory", fake_recipient_add_to_memory)
 
     result = sender.send_message("hello", recipients=[recipient])
-    pattern = r"1 → \[2\] : hello"
-    assert re.match(pattern, result)
+    assert result == "sent message 'hello' to [2]"
 
     # sender + recipient memory => should be called twice
     assert len(recorded_calls) == 2
@@ -369,8 +368,7 @@ async def test_asend_message_updates_both_agents_memory(monkeypatch):
     )
 
     result = await sender.asend_message("hello", recipients=[recipient])
-    pattern = r"1 → \[2\] : hello"
-    assert re.match(pattern, result)
+    assert result == "sent message 'hello' to [2]"
 
     assert len(recorded_calls) == 2
     sender_call = next(call for label, call in recorded_calls if label == "sender")
@@ -963,6 +961,93 @@ async def test_asend_message_stores_serializable_ids(monkeypatch):
     assert data["sender"] == 10
     assert data["message"] == "hello"
     assert "recipients" not in data
+
+
+def test_send_message_skips_non_llm_recipient(monkeypatch, caplog):
+    """send_message should mirror speak_to when a recipient has no memory."""
+    sender, recipient = _make_send_message_model(monkeypatch)
+
+    class RuleAgent(Agent):
+        def step(self):
+            pass
+
+    skipped = RuleAgent(model=sender.model)
+    skipped.unique_id = 30
+    sender.model.grid.place_agent(skipped, (2, 2))
+
+    recorded_calls = []
+
+    def fake_sender_add_to_memory(*args, **kwargs):
+        recorded_calls.append(("sender", kwargs))
+
+    def fake_recipient_add_to_memory(*args, **kwargs):
+        recorded_calls.append(("recipient", kwargs))
+
+    monkeypatch.setattr(sender.memory, "add_to_memory", fake_sender_add_to_memory)
+    monkeypatch.setattr(recipient.memory, "add_to_memory", fake_recipient_add_to_memory)
+
+    with caplog.at_level(logging.WARNING, logger="mesa_llm.llm_agent"):
+        result = sender.send_message("hello", recipients=[recipient, skipped])
+
+    assert result == (
+        "sent message 'hello' to [20]; skipped [30] because they have no `memory` attribute"
+    )
+    assert len(recorded_calls) == 2
+    sender_call = next(call for label, call in recorded_calls if label == "sender")
+    recipient_call = next(
+        call for label, call in recorded_calls if label == "recipient"
+    )
+    assert sender_call["content"]["recipients"] == [20]
+    assert recipient_call["content"]["sender"] == 10
+    assert any(
+        "30" in record.message and "send_message" in record.message
+        for record in caplog.records
+    )
+
+
+@pytest.mark.asyncio
+async def test_asend_message_skips_non_llm_recipient(monkeypatch, caplog):
+    """asend_message should mirror speak_to when a recipient has no memory."""
+    sender, recipient = _make_send_message_model(monkeypatch)
+
+    class RuleAgent(Agent):
+        def step(self):
+            pass
+
+    skipped = RuleAgent(model=sender.model)
+    skipped.unique_id = 30
+    sender.model.grid.place_agent(skipped, (2, 2))
+
+    recorded_calls = []
+
+    async def fake_sender_add_to_memory(*args, **kwargs):
+        recorded_calls.append(("sender", kwargs))
+
+    async def fake_recipient_add_to_memory(*args, **kwargs):
+        recorded_calls.append(("recipient", kwargs))
+
+    monkeypatch.setattr(sender.memory, "aadd_to_memory", fake_sender_add_to_memory)
+    monkeypatch.setattr(
+        recipient.memory, "aadd_to_memory", fake_recipient_add_to_memory
+    )
+
+    with caplog.at_level(logging.WARNING, logger="mesa_llm.llm_agent"):
+        result = await sender.asend_message("hello", recipients=[recipient, skipped])
+
+    assert result == (
+        "sent message 'hello' to [20]; skipped [30] because they have no `memory` attribute"
+    )
+    assert len(recorded_calls) == 2
+    sender_call = next(call for label, call in recorded_calls if label == "sender")
+    recipient_call = next(
+        call for label, call in recorded_calls if label == "recipient"
+    )
+    assert sender_call["content"]["recipients"] == [20]
+    assert recipient_call["content"]["sender"] == 10
+    assert any(
+        "30" in record.message and "send_message" in record.message
+        for record in caplog.records
+    )
 
 
 # ---------------------------------------------------------------------------
