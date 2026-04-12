@@ -176,6 +176,9 @@ class Reasoning(ABC):
         )
         response_message = rsp.choices[0].message
         plan = Plan(step=self.agent.model.steps, llm_plan=response_message, ttl=ttl)
+        self.agent.memory.add_to_memory(
+            type="plan_execution", content={"content": str(plan)}
+        )
 
         return plan
 
@@ -203,5 +206,8 @@ class Reasoning(ABC):
         )
         response_message = rsp.choices[0].message
         plan = Plan(step=self.agent.model.steps, llm_plan=response_message, ttl=ttl)
+        await self.agent.memory.aadd_to_memory(
+            type="plan_execution", content={"content": str(plan)}
+        )
 
         return plan

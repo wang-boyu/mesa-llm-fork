@@ -52,6 +52,7 @@ class TestReWOOReasoning:
     def test_plan_with_remaining_tool_calls(self, mock_agent):
         """Test plan method when there are remaining tool calls."""
         mock_agent.generate_obs = Mock()
+        mock_agent.memory = Mock()
         mock_agent.step_prompt = None
 
         reasoning = ReWOOReasoning(mock_agent)
@@ -76,6 +77,7 @@ class TestReWOOReasoning:
         assert result.llm_plan.tool_calls == [mock_tool_2]  # Should get index 1 (3-2)
         assert reasoning.remaining_tool_calls == 1
         mock_agent.generate_obs.assert_not_called()
+        mock_agent.memory.add_to_memory.assert_not_called()
 
     def test_plan_new_plan_generation(self, llm_response_factory, mock_agent):
         """Test plan method when generating a new plan."""
@@ -301,6 +303,8 @@ class TestReWOOReasoning:
     def test_aplan_with_remaining_tool_calls(self, mock_agent):
         """Test aplan method when there are remaining tool calls."""
         mock_agent.generate_obs = Mock()
+        mock_agent.memory = Mock()
+        mock_agent.memory.aadd_to_memory = AsyncMock()
         mock_agent.step_prompt = None
 
         reasoning = ReWOOReasoning(mock_agent)
@@ -320,6 +324,7 @@ class TestReWOOReasoning:
         assert result.llm_plan.tool_calls == [mock_tool_2]  # Should get index 1 (2-1)
         assert reasoning.remaining_tool_calls == 0
         mock_agent.generate_obs.assert_not_called()
+        mock_agent.memory.aadd_to_memory.assert_not_awaited()
 
     def test_aplan_new_plan_generation(self, llm_response_factory, mock_agent):
         """Test aplan uses agenerate_obs (async) not generate_obs (sync)."""

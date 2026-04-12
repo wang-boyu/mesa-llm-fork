@@ -121,12 +121,6 @@ class CoTReasoning(Reasoning):
             obs = self.agent.generate_obs()
 
         llm = self.agent.llm
-        obs_str = str(obs)
-
-        # Add current observation to memory (for record)
-        self.agent.memory.add_to_memory(
-            type="Observation", content={"content": obs_str}
-        )
         system_prompt = self.get_cot_system_prompt(obs)
 
         llm.system_prompt = system_prompt
@@ -138,7 +132,7 @@ class CoTReasoning(Reasoning):
 
         chaining_message = rsp.choices[0].message.content
         self.agent.memory.add_to_memory(
-            type="Plan", content={"content": chaining_message}
+            type="plan", content={"content": chaining_message}
         )
 
         # Pass plan content to agent for display
@@ -149,10 +143,6 @@ class CoTReasoning(Reasoning):
             selected_tools=selected_tools,
             ttl=ttl,
             tool_calls=tool_calls,
-        )
-
-        self.agent.memory.add_to_memory(
-            type="Plan-Execution", content={"content": str(cot_plan)}
         )
 
         return cot_plan
@@ -192,11 +182,6 @@ class CoTReasoning(Reasoning):
             obs = await self.agent.agenerate_obs()
 
         llm = self.agent.llm
-
-        obs_str = str(obs)
-        await self.agent.memory.aadd_to_memory(
-            type="Observation", content={"content": obs_str}
-        )
         system_prompt = self.get_cot_system_prompt(obs)
         llm.system_prompt = system_prompt
 
@@ -208,7 +193,7 @@ class CoTReasoning(Reasoning):
 
         chaining_message = rsp.choices[0].message.content
         await self.agent.memory.aadd_to_memory(
-            type="Plan", content={"content": chaining_message}
+            type="plan", content={"content": chaining_message}
         )
 
         # Pass plan content to agent for display
@@ -219,10 +204,6 @@ class CoTReasoning(Reasoning):
             selected_tools=selected_tools,
             ttl=ttl,
             tool_calls=tool_calls,
-        )
-
-        await self.agent.memory.aadd_to_memory(
-            type="Plan-Execution", content={"content": str(cot_plan)}
         )
 
         return cot_plan

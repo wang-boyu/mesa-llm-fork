@@ -1,4 +1,5 @@
-from unittest.mock import Mock
+import asyncio
+from unittest.mock import AsyncMock, Mock
 
 from mesa_llm.reasoning.reasoning import (
     Observation,
@@ -92,6 +93,10 @@ class TestReasoningBase:
         assert result_plan.step == 5
         assert result_plan.llm_plan.content == "Final LLM message"
         assert result_plan.ttl == 1
+        mock_agent.memory.add_to_memory.assert_called_once_with(
+            type="plan_execution",
+            content={"content": str(result_plan)},
+        )
 
     def test_execute_tool_call_propagates_ttl(self):
         """Test that execute_tool_call propagates caller-provided TTL."""
@@ -153,4 +158,42 @@ class TestReasoningBase:
             prompt="Execute the plan.",
             tool_schema=[{"schema": "example"}],
             tool_choice="required",
+        )
+
+    def test_aexecute_tool_call_records_plan_execution(
+        self, llm_response_factory, mock_agent
+    ):
+        """Test that aexecute_tool_call logs plan_execution to memory."""
+        mock_agent.model.steps = 5
+        mock_llm_response = llm_response_factory(content="Async final LLM message")
+        mock_agent.llm.agenerate = AsyncMock(return_value=mock_llm_response)
+        mock_agent.tool_manager.get_all_tools_schema.return_value = [
+            {"schema": "example"}
+        ]
+        mock_agent.memory.aadd_to_memory = AsyncMock()
+
+        class ConcreteReasoning(Reasoning):
+            def plan(
+                self,
+                prompt=None,
+                obs=None,
+                ttl=1,
+                selected_tools=None,
+                tool_calls="auto",
+            ):
+                pass
+
+        reasoning = ConcreteReasoning(agent=mock_agent)
+        result_plan = asyncio.run(
+            reasoning.aexecute_tool_call("Execute the plan.", selected_tools=["tool1"])
+        )
+
+        mock_agent.llm.agenerate.assert_awaited_once_with(
+            prompt="Execute the plan.",
+            tool_schema=[{"schema": "example"}],
+            tool_choice="auto",
+        )
+        mock_agent.memory.aadd_to_memory.assert_awaited_once_with(
+            type="plan_execution",
+            content={"content": str(result_plan)},
         )
