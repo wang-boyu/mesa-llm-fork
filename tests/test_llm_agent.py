@@ -963,3 +963,42 @@ async def test_asend_message_stores_serializable_ids(monkeypatch):
     assert data["sender"] == 10
     assert data["message"] == "hello"
     assert "recipients" not in data
+
+
+# ---------------------------------------------------------------------------
+# _build_observation — None pos handling (#244)
+# ---------------------------------------------------------------------------
+
+
+def test_generate_obs_with_none_pos(monkeypatch):
+    """generate_obs must not crash when agent.pos is None and has no cell."""
+    monkeypatch.setenv("GEMINI_API_KEY", "dummy")
+
+    class DummyModel(Model):
+        def __init__(self):
+            super().__init__(rng=42)
+            self.grid = MultiGrid(3, 3, torus=False)
+
+    model = DummyModel()
+
+    agent = LLMAgent.create_agents(
+        model,
+        n=1,
+        reasoning=ReActReasoning,
+        system_prompt="Test prompt",
+        vision=1,
+        internal_state=[],
+    ).to_list()[0]
+
+    # Agent is explicitly NOT placed on the grid
+    agent.pos = None
+    if hasattr(agent, "cell"):
+        delattr(agent, "cell")
+
+    monkeypatch.setattr(agent.memory, "add_to_memory", lambda *args, **kwargs: None)
+
+    obs = agent.generate_obs()
+
+    assert obs is not None
+    assert obs.self_state["location"] is None
+    assert len(obs.local_state) == 0

@@ -174,6 +174,10 @@ class LLMAgent(Agent):
             "internal_state": self.internal_state,
         }
         if self.vision is not None and self.vision > 0:
+            # Early return: agent has no position and no cell — cannot query neighbors
+            if self.pos is None and getattr(self, "cell", None) is None:
+                return self_state, {}
+
             # Check which type of space/grid the model uses
             grid = getattr(self.model, "grid", None)
             space = getattr(self.model, "space", None)
