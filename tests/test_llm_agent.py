@@ -232,6 +232,7 @@ def test_generate_obs_with_one_neighbor(monkeypatch):
     obs = agent.generate_obs()
 
     assert obs.self_state["agent_unique_id"] == 1
+    assert "system_prompt" not in obs.self_state
 
     # we should have exactly one neighboring agent in local_state
     assert len(obs.local_state) == 1
@@ -1127,3 +1128,15 @@ def test_generate_obs_with_none_pos(monkeypatch):
     assert obs is not None
     assert obs.self_state["location"] is None
     assert len(obs.local_state) == 0
+
+
+def test_system_prompt_proxies_llm_prompt(basic_agent):
+    """Agent system_prompt should proxy the underlying LLM prompt state."""
+    basic_agent.system_prompt = "Updated prompt"
+
+    assert basic_agent.system_prompt == "Updated prompt"
+    assert basic_agent.llm.system_prompt == "Updated prompt"
+
+    basic_agent.llm.system_prompt = "LLM prompt"
+
+    assert basic_agent.system_prompt == "LLM prompt"

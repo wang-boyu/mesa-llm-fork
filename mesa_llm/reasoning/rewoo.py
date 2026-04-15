@@ -34,6 +34,14 @@ class ReWOOReasoning(Reasoning):
 
     def get_rewoo_system_prompt(self, obs: Observation) -> str:
         memory = getattr(self.agent, "memory", None)
+        agent_persona = getattr(self.agent, "system_prompt", None)
+        persona_section = ""
+        if isinstance(agent_persona, str) and agent_persona.strip():
+            persona_section = (
+                "\n        ---\n\n"
+                "        # Agent Persona\n"
+                f"        {agent_persona.strip()}\n"
+            )
 
         long_term_memory = ""
         if (
@@ -55,6 +63,7 @@ class ReWOOReasoning(Reasoning):
         You are an autonomous agent that creates multi-step plans without re-observing during execution.
         Using the ReWOO (Reasoning WithOut Observation) approach, you will create a comprehensive plan
         that anticipates multiple steps ahead based on your current observation and memory.
+{persona_section}
 
         ---
 
@@ -154,11 +163,11 @@ class ReWOOReasoning(Reasoning):
         llm = self.agent.llm
         system_prompt = self.get_rewoo_system_prompt(self.current_obs)
 
-        llm.system_prompt = system_prompt
         rsp = llm.generate(
             prompt=prompt,
             tool_schema=self.agent.tool_manager.get_all_tools_schema(selected_tools),
             tool_choice="none",
+            system_prompt=system_prompt,
         )
 
         self.agent.memory.add_to_memory(
@@ -233,11 +242,11 @@ class ReWOOReasoning(Reasoning):
         llm = self.agent.llm
         system_prompt = self.get_rewoo_system_prompt(self.current_obs)
 
-        llm.system_prompt = system_prompt
         rsp = await llm.agenerate(
             prompt=prompt,
             tool_schema=self.agent.tool_manager.get_all_tools_schema(selected_tools),
             tool_choice="none",
+            system_prompt=system_prompt,
         )
 
         await self.agent.memory.aadd_to_memory(

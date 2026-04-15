@@ -31,6 +31,7 @@ class TestReWOOReasoning:
 
     def test_get_rewoo_system_prompt(self, mock_agent):
         """Test get_rewoo_system_prompt."""
+        mock_agent.system_prompt = "Agent persona"
         mock_agent.memory = Mock()
         mock_agent.memory.format_long_term.return_value = "Long term memory content"
         mock_agent.memory.format_short_term.return_value = "Short term memory content"
@@ -44,10 +45,28 @@ class TestReWOOReasoning:
 
         assert "Long term memory content" in prompt
         assert "Short term memory content" in prompt
+        assert "Agent Persona" in prompt
+        assert "Agent persona" in prompt
         assert "Current Observation" in prompt
         assert "plan" in prompt
         assert "step_1" in prompt
         assert "contingency" in prompt
+
+    def test_get_rewoo_system_prompt_omits_empty_persona(self, mock_agent):
+        """Empty agent persona should not add a persona section."""
+        mock_agent.system_prompt = None
+        mock_agent.memory = Mock()
+        mock_agent.memory.format_long_term.return_value = "Long term memory content"
+        mock_agent.memory.format_short_term.return_value = "Short term memory content"
+
+        reasoning = ReWOOReasoning(mock_agent)
+        reasoning.current_obs = Observation(
+            step=1, self_state={"test": "data"}, local_state={}
+        )
+
+        prompt = reasoning.get_rewoo_system_prompt(reasoning.current_obs)
+
+        assert "Agent Persona" not in prompt
 
     def test_plan_with_remaining_tool_calls(self, mock_agent):
         """Test plan method when there are remaining tool calls."""
@@ -224,6 +243,36 @@ class TestReWOOReasoning:
 
         assert isinstance(result, Plan)
         mock_agent.tool_manager.get_all_tools_schema.assert_called_with(selected_tools)
+
+    def test_plan_uses_scoped_system_prompt(self, llm_response_factory, mock_agent):
+        """ReWOO plan should pass system prompt per call and not mutate llm state."""
+        mock_agent.step_prompt = "Default step prompt"
+        mock_agent.llm.system_prompt = "base-system-prompt"
+        mock_agent.memory = Mock()
+        mock_agent.memory.format_long_term.return_value = "Long term memory"
+        mock_agent.memory.format_short_term.return_value = "Short term memory"
+        mock_agent.memory.add_to_memory = Mock()
+        mock_agent.tool_manager = Mock()
+        mock_agent.tool_manager.get_all_tools_schema.return_value = {}
+
+        mock_agent.llm.generate.return_value = llm_response_factory(
+            content="Test plan content"
+        )
+
+        mock_plan_without_tool_calls = Mock(spec=[])
+        reasoning = ReWOOReasoning(mock_agent)
+        reasoning.execute_tool_call = Mock(
+            return_value=Plan(step=1, llm_plan=mock_plan_without_tool_calls)
+        )
+
+        obs = Observation(step=1, self_state={}, local_state={})
+        expected_prompt = reasoning.get_rewoo_system_prompt(obs)
+        reasoning.plan(obs=obs)
+
+        assert mock_agent.llm.system_prompt == "base-system-prompt"
+        assert (
+            mock_agent.llm.generate.call_args.kwargs["system_prompt"] == expected_prompt
+        )
 
     def test_plan_no_prompt_error(self, mock_agent):
         """Test plan method raises error when no prompt is provided."""
@@ -500,6 +549,38 @@ class TestReWOOReasoning:
 
         assert isinstance(result, Plan)
         mock_agent.tool_manager.get_all_tools_schema.assert_called_with(selected_tools)
+
+    def test_aplan_uses_scoped_system_prompt(self, llm_response_factory, mock_agent):
+        """Async ReWOO plan should pass system prompt per call and not mutate llm state."""
+        mock_agent.step_prompt = "Default step prompt"
+        mock_agent.llm.system_prompt = "base-system-prompt"
+        mock_agent.memory = Mock()
+        mock_agent.memory.format_long_term.return_value = "Long term memory"
+        mock_agent.memory.format_short_term.return_value = "Short term memory"
+        mock_agent.memory.add_to_memory = Mock()
+        mock_agent.memory.aadd_to_memory = AsyncMock()
+        mock_agent.tool_manager = Mock()
+        mock_agent.tool_manager.get_all_tools_schema.return_value = {}
+
+        mock_agent.llm.agenerate = AsyncMock(
+            return_value=llm_response_factory(content="Async plan content")
+        )
+
+        mock_plan_without_tool_calls = Mock(spec=[])
+        reasoning = ReWOOReasoning(mock_agent)
+        reasoning.aexecute_tool_call = AsyncMock(
+            return_value=Plan(step=1, llm_plan=mock_plan_without_tool_calls)
+        )
+
+        obs = Observation(step=1, self_state={}, local_state={})
+        expected_prompt = reasoning.get_rewoo_system_prompt(obs)
+        asyncio.run(reasoning.aplan(obs=obs))
+
+        assert mock_agent.llm.system_prompt == "base-system-prompt"
+        assert (
+            mock_agent.llm.agenerate.call_args.kwargs["system_prompt"]
+            == expected_prompt
+        )
 
     def test_aplan_with_no_tool_calls(self, llm_response_factory, mock_agent):
         """Test aplan method when execution returns no tool calls."""

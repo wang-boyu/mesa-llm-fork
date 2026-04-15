@@ -9,14 +9,16 @@ if TYPE_CHECKING:
 @dataclass
 class Observation:
     """
-    A structured snapshot containing the agent's current step, self-state (internal attributes, location, system context), and local-state (neighboring agents and their properties). This provides complete situational awareness for decision-making.
+    A structured snapshot containing the agent's current step, self-state
+    (internal attributes and location), and local-state (neighboring agents
+    and their properties). This provides complete situational awareness for
+    decision-making.
 
     Attributes:
         step (int): The current simulation time step when the observation is made.
 
         self_state (dict): A dictionary containing comprehensive information about the observing agent itself.
             This includes:
-            - System prompt or role-specific context for LLM reasoning (if used)
             - Internal state such as morale, fear, aggression, fatigue, etc (behavioural).
             - Agent's current location or spatial coordinates
             - Any other agent-specific metadata that could influence decision-making
@@ -178,13 +180,13 @@ class Reasoning(ABC):
             "You are an executor that executes the plan given to you in the prompt through tool calls. "
             "If the plan concludes that no action should be taken, do not call any tool."
         )
-        self.agent.llm.system_prompt = system_prompt
         rsp = self.agent.llm.generate(
             prompt=chaining_message,
             tool_schema=self.agent.tool_manager.get_all_tools_schema(
                 selected_tools=selected_tools
             ),
             tool_choice=tool_calls,
+            system_prompt=system_prompt,
         )
         response_message = rsp.choices[0].message
         plan = Plan(step=self.agent.model.steps, llm_plan=response_message, ttl=ttl)
@@ -213,13 +215,13 @@ class Reasoning(ABC):
             "You are an executor that executes the plan given to you in the prompt through tool calls. "
             "If the plan concludes that no action should be taken, do not call any tool."
         )
-        self.agent.llm.system_prompt = system_prompt
         rsp = await self.agent.llm.agenerate(
             prompt=chaining_message,
             tool_schema=self.agent.tool_manager.get_all_tools_schema(
                 selected_tools=selected_tools
             ),
             tool_choice=tool_calls,
+            system_prompt=system_prompt,
         )
         response_message = rsp.choices[0].message
         plan = Plan(step=self.agent.model.steps, llm_plan=response_message, ttl=ttl)

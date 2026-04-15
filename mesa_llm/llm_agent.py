@@ -96,6 +96,14 @@ class LLMAgent(Agent):
     def __str__(self):
         return f"LLMAgent {self.unique_id}"
 
+    @property
+    def system_prompt(self) -> str | None:
+        return self.llm.system_prompt
+
+    @system_prompt.setter
+    def system_prompt(self, value: str | None):
+        self.llm.system_prompt = value
+
     def _format_message_status(
         self, message: str, delivered_ids: list[int], skipped_ids: list[int]
     ) -> str:
@@ -181,7 +189,6 @@ class LLMAgent(Agent):
         """
         self_state = {
             "agent_unique_id": self.unique_id,
-            "system_prompt": self.system_prompt,
             "location": (
                 self.pos
                 if self.pos is not None

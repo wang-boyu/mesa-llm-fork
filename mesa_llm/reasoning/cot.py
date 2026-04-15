@@ -30,6 +30,14 @@ class CoTReasoning(Reasoning):
 
     def get_cot_system_prompt(self, obs: Observation) -> str:
         memory = getattr(self.agent, "memory", None)
+        agent_persona = getattr(self.agent, "system_prompt", None)
+        persona_section = ""
+        if isinstance(agent_persona, str) and agent_persona.strip():
+            persona_section = (
+                "\n        ---\n\n"
+                "        # Agent Persona\n"
+                f"        {agent_persona.strip()}\n"
+            )
         long_term_memory = ""
         if (
             memory
@@ -52,6 +60,7 @@ class CoTReasoning(Reasoning):
         You are an autonomous agent operating in a simulation.
         Use a detailed step-by-step reasoning process (Chain-of-Thought) to decide your next action.
         Your memory contains information from past experiences, and your observation provides the current context.
+{persona_section}
 
         ---
 
@@ -128,11 +137,11 @@ class CoTReasoning(Reasoning):
         llm = self.agent.llm
         system_prompt = self.get_cot_system_prompt(obs)
 
-        llm.system_prompt = system_prompt
         rsp = llm.generate(
             prompt=prompt,
             tool_schema=self.agent.tool_manager.get_all_tools_schema(selected_tools),
             tool_choice="none",
+            system_prompt=system_prompt,
         )
 
         chaining_message = rsp.choices[0].message.content
@@ -193,12 +202,12 @@ class CoTReasoning(Reasoning):
 
         llm = self.agent.llm
         system_prompt = self.get_cot_system_prompt(obs)
-        llm.system_prompt = system_prompt
 
         rsp = await llm.agenerate(
             prompt=prompt,
             tool_schema=self.agent.tool_manager.get_all_tools_schema(selected_tools),
             tool_choice="none",
+            system_prompt=system_prompt,
         )
 
         chaining_message = rsp.choices[0].message.content

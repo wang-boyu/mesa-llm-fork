@@ -21,6 +21,7 @@ class TestCoTReasoning:
 
     def test_get_cot_system_prompt_with_memory(self, mock_agent):
         """Test get_cot_system_prompt with memory methods available."""
+        mock_agent.system_prompt = "Agent persona"
         mock_agent.memory = Mock()
         mock_agent.memory.format_long_term.return_value = "Long term memory content"
         mock_agent.memory.format_short_term.return_value = "Short term memory content"
@@ -32,9 +33,25 @@ class TestCoTReasoning:
 
         assert "Long term memory content" in prompt
         assert "Short term memory content" in prompt
+        assert "Agent Persona" in prompt
+        assert "Agent persona" in prompt
         assert "Current Observation" in prompt
         assert "Thought 1:" in prompt
         assert "Action:" in prompt
+
+    def test_get_cot_system_prompt_omits_empty_persona(self, mock_agent):
+        """Empty agent persona should not add a persona section."""
+        mock_agent.system_prompt = None
+        mock_agent.memory = Mock()
+        mock_agent.memory.format_long_term.return_value = "Long term memory content"
+        mock_agent.memory.format_short_term.return_value = "Short term memory content"
+
+        reasoning = CoTReasoning(mock_agent)
+        obs = Observation(step=1, self_state={"test": "data"}, local_state={})
+
+        prompt = reasoning.get_cot_system_prompt(obs)
+
+        assert "Agent Persona" not in prompt
 
     def test_plan_returns_proper_plan(self, monkeypatch, llm_response_factory):
         """
@@ -247,4 +264,41 @@ class TestCoTReasoning:
         assert mock_agent.llm.agenerate.call_count == 2
         assert mock_agent.llm.agenerate.call_args_list[1].kwargs["tool_choice"] == (
             "auto"
+        )
+
+    def test_plan_uses_scoped_system_prompts(self, llm_response_factory, mock_agent):
+        """CoT plan should pass prompts per call and avoid mutating llm.system_prompt."""
+        mock_agent.step_prompt = "Default step prompt"
+        mock_agent.llm.system_prompt = "base-system-prompt"
+        mock_agent.memory = Mock()
+        mock_agent.memory.format_long_term.return_value = "Long term memory"
+        mock_agent.memory.format_short_term.return_value = "Short term memory"
+        mock_agent.memory.add_to_memory = Mock()
+        mock_agent.tool_manager = Mock()
+        mock_agent.tool_manager.get_all_tools_schema.return_value = {}
+        mock_agent._step_display_data = {}
+
+        mock_plan_response = llm_response_factory(
+            content="Thought 1: plan\nAction: move"
+        )
+        mock_exec_response = llm_response_factory(content="executor response")
+        mock_agent.llm.generate = Mock(
+            side_effect=[mock_plan_response, mock_exec_response]
+        )
+
+        reasoning = CoTReasoning(mock_agent)
+        obs = Observation(step=1, self_state={}, local_state={})
+        expected_plan_prompt = reasoning.get_cot_system_prompt(obs)
+
+        reasoning.plan(obs=obs)
+
+        assert mock_agent.llm.system_prompt == "base-system-prompt"
+        assert (
+            mock_agent.llm.generate.call_args_list[0].kwargs["system_prompt"]
+            == expected_plan_prompt
+        )
+        assert (
+            mock_agent.llm.generate.call_args_list[1].kwargs["system_prompt"]
+            == "You are an executor that executes the plan given to you in the prompt through tool calls. "
+            "If the plan concludes that no action should be taken, do not call any tool."
         )
