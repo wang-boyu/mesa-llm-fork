@@ -22,6 +22,17 @@ class TestReActOutput:
         assert output.reasoning == "I need to move to a better position"
         assert output.action == "move_north"
 
+    def test_react_output_schema_includes_field_descriptions(self):
+        """Structured output schema should keep the field guidance text."""
+        schema = ReActOutput.model_json_schema()
+
+        assert schema["properties"]["reasoning"]["description"] == (
+            "Step-by-step reasoning about the situation based on memory and observation"
+        )
+        assert schema["properties"]["action"]["description"] == (
+            "The specific action to take without using tools"
+        )
+
 
 class TestReActReasoning:
     """Test the ReActReasoning class."""
