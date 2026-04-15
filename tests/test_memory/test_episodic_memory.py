@@ -4,7 +4,11 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from mesa_llm.memory.episodic_memory import EpisodicMemory, normalize_dict_values
+from mesa_llm.memory.episodic_memory import (
+    EpisodicMemory,
+    EventGrade,
+    normalize_dict_values,
+)
 from mesa_llm.memory.memory import MemoryEntry
 
 
@@ -37,6 +41,14 @@ def test_normalize_dict_floats_logic_when_empty():
 
 class TestEpisodicMemory:
     """Core functionality test"""
+
+    def test_event_grade_schema_includes_field_description(self):
+        """Structured output schema should keep the grading instructions."""
+        schema = EventGrade.model_json_schema()
+
+        assert schema["properties"]["grade"]["description"] == (
+            "Integer score representing the importance of the event"
+        )
 
     def test_memory_init(self, episodic_mock_agent):
         """Test EpisodicMemory class initialization with defaults and custom values"""
