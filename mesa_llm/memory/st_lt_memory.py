@@ -124,7 +124,7 @@ class STLTMemory(Memory):
         new_entry = MemoryEntry(
             agent=self.agent,
             content=self.step_content,
-            step=int(self.agent.model.time),
+            step=self.agent.model.steps,
         )
 
         self.short_term_memory.append(new_entry)

@@ -22,7 +22,6 @@ def mock_model():
     model = Mock()
     model.__class__.__name__ = "TestModel"
     model.steps = 0
-    model.time = 0.0  # Added for Mesa 4.x compatibility
     model.agents = []
     return model
 

@@ -187,7 +187,7 @@ class EpisodicMemory(Memory):
         recency_dict = {}
 
         entries = list(self.memory_entries)
-        current_step = int(self.agent.model.time)
+        current_step = self.agent.model.steps
 
         for i, entry in enumerate(entries):
             importance_dict[i] = self._extract_importance(entry)
@@ -211,7 +211,7 @@ class EpisodicMemory(Memory):
         new_entry = MemoryEntry(
             agent=self.agent,
             content={type: graded_content},
-            step=int(self.agent.model.time),
+            step=self.agent.model.steps,
         )
         self.memory_entries.append(new_entry)
 

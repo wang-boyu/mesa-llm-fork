@@ -140,7 +140,7 @@ class SimulationRecorder:
         event = SimulationEvent(
             event_id=event_id,
             timestamp=datetime.now(UTC),
-            step=int(self.model.time),
+            step=self.model.steps,
             agent_id=agent_id,
             event_type=event_type,
             content=formatted_content,
@@ -220,7 +220,7 @@ class SimulationRecorder:
         self.simulation_metadata.update(
             {
                 "end_time": datetime.now(UTC).isoformat(),
-                "total_steps": int(self.model.time),
+                "total_steps": self.model.steps,
                 "total_events": len(self.events),
                 "total_agents": len(self.model.agents),
                 "duration_minutes": (
@@ -233,7 +233,7 @@ class SimulationRecorder:
                     if getattr(self.model, "max_steps", None) is None
                     else (
                         "interrupted"
-                        if int(self.model.time) < self.model.max_steps
+                        if self.model.steps < self.model.max_steps
                         else "completed"
                     )
                 ),
@@ -249,11 +249,11 @@ class SimulationRecorder:
                     if getattr(self.model, "max_steps", None) is None
                     else (
                         "interrupted"
-                        if int(self.model.time) < self.model.max_steps
+                        if self.model.steps < self.model.max_steps
                         else "completed"
                     )
                 ),
-                "final_step": int(self.model.time),
+                "final_step": self.model.steps,
                 "total_events": len(self.events),
             },
         )
@@ -293,7 +293,7 @@ class SimulationRecorder:
             "total_events": len(self.events),
             "unique_agents": len(agent_ids),
             "event_types": list({event.event_type for event in self.events}),
-            "simulation_steps": int(self.model.time),
+            "simulation_steps": self.model.steps,
             "recording_duration_minutes": (
                 datetime.now(UTC) - self.start_time
             ).total_seconds()

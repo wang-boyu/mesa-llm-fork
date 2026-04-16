@@ -42,7 +42,6 @@ def mock_agent():
     agent.__str__ = Mock(return_value="TestAgent(123)")
     agent.model = Mock()
     agent.model.steps = 1
-    agent.model.time = 1.0
     agent.model.events = []
     agent.step_prompt = "Test step prompt"
     agent.llm = Mock()

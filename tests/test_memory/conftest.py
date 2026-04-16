@@ -9,6 +9,5 @@ def episodic_mock_agent(mock_agent, llm_response_factory):
     agent.llm.generate.return_value = llm_response_factory(content='{"grade": 3}')
 
     agent.model.steps = 100
-    agent.model.time = 100.0
     agent.model.events = []
     return agent
