@@ -122,13 +122,16 @@ class ModuleLLM:
         ) or ""
         messages.append({"role": "system", "content": system_content})
 
-        if prompt:
+        if prompt is not None:
             if isinstance(prompt, str):
                 messages.append({"role": "user", "content": prompt})
             elif isinstance(prompt, list):
-                # Use extend to add all prompts from the list
                 messages.extend([{"role": "user", "content": p} for p in prompt])
-
+            else:
+                raise TypeError(
+                    f"Invalid prompt type '{type(prompt).__name__}'. "
+                    "Expected str, list[str], or None."
+                )
         return messages
 
     def _build_rate_limit_error(self, error: RateLimitError) -> RateLimitError:
