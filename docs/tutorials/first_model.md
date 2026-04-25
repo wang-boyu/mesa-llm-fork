@@ -28,7 +28,7 @@ human-like agent behavior.
 While Mesa-LLM adds:
 - Prompt-driven reasoning
 - Reasoning strategies (e.g. ReAct)
-- Optional memory components for contextual reasoning across steps
+- Optional memory components for contextual reasoning across steps (e.g. `STLTMemory`)
 - Integration with LLM backends such as OpenAI, Ollama, and others.
 
 ## Model Description
@@ -98,7 +98,7 @@ pip install -U -e git+https://github.com/YOUR_FORK/mesa-llm@YOUR_BRANCH#egg=mesa
 ```
 
 ## Building the Model
-After Mesa-LLM is installed, a 'model' can be built.
+After Mesa-LLM is installed, a model can be built.
 This tutorial can be followed in a regular Python script or in a [Jupyter](https://jupyter.org/) notebook.
 
 
@@ -119,10 +119,10 @@ from mesa_llm.memory.st_lt_memory import STLTMemory
 ```
 
 ## Creating the Agent
-We begin by defining a minimal agent that inherits from 'LLMAgent'.
+We begin by defining a minimal agent that inherits from `LLMAgent`.
 
-Unlike traditional Mesa agents, 'LLMAgent' delegates its reasoning to a language model through a configurable reasoning strategy.
-In this tutorial, we use ReActReasoning, which produces both a reasoning trace and a suggested action.
+Unlike traditional Mesa agents, `LLMAgent` delegates its reasoning to a language model through a configurable reasoning strategy.
+In this tutorial, we use `ReActReasoning`, which produces both a reasoning trace and a suggested action.
 
 Using the previously imported dependencies, we define the agent class:
 ```python
@@ -158,9 +158,9 @@ class SimpleAgent(LLMAgent):
 ```
 
 ## Create the Model
-The 'model' manages agent creation and advances the simulation.
+The model manages agent creation and advances the simulation.
 
-'Agent' are created using the `create_agents()` helper provided by Mesa.
+Agents are created using the `create_agents()` helper provided by Mesa.
 Mesa-LLM integrates with this mechanism by allowing `LLMAgent` to be used
 wherever a standard Mesa `Agent` is expected.
 
@@ -207,9 +207,9 @@ if __name__ == "__main__":
     for _ in range(3):
         model.step()
 ```
-Each call to 'model.step()' activates all agents once and prints their language-based reasoning.
+Each call to `model.step()` activates all agents once and prints their language-based reasoning.
 
-- An example output from running the 'model' is shown below
+- An example output from running the `model` is shown below
 
 ```bash
 ╭─ Step 1 | SimpleAgent 1 ──────────────────────────────────────────────────────────────────────────────╮
@@ -225,7 +225,7 @@ Each call to 'model.step()' activates all agents once and prints their language-
 ```
 
 ## About Actions in the Output
-This is expected behavior when using ReActReasoning, which always produces both reasoning and an action suggestion as part of its design.
+This is expected behavior when using `ReActReasoning`, which always produces both reasoning and an action suggestion as part of its design.
 
 ### Important Note:
 - In this introductory tutorial, action suggestions are not executed.
