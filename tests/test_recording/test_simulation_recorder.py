@@ -316,6 +316,48 @@ class TestSimulationRecorder:
         ]
         assert len(simulation_end_events) == 1
 
+        recorded_simulation_end_events = [
+            e for e in recorder.events if e.event_type == "simulation_end"
+        ]
+        assert len(recorded_simulation_end_events) == 1
+        assert recorder.events[-1].event_type == "simulation_end"
+
+    def test_auto_save_checkpoint_does_not_freeze_simulation_end(
+        self, mock_model, temp_dir
+    ):
+        """Autosave checkpoints should not leave stale simulation_end data in later exports."""
+        mock_model.max_steps = 10
+        mock_model.steps = 1
+        recorder = SimulationRecorder(
+            model=mock_model,
+            output_dir=str(temp_dir),
+            auto_save_interval=2,
+        )
+
+        recorder.record_event("early_event_1", {"data": "early_1"})
+        recorder.record_event("early_event_2", {"data": "early_2"})
+        assert recorder.events[-1].event_type == "simulation_end"
+
+        mock_model.steps = 10
+        recorder.record_event("late_event", {"data": "late"})
+        assert all(event.event_type != "simulation_end" for event in recorder.events)
+
+        filepath = recorder.save(filename="final.json", format="json")
+
+        with open(filepath) as f:
+            data = json.load(f)
+
+        event_types = [event["event_type"] for event in data["events"]]
+        assert event_types.count("simulation_end") == 1
+        assert event_types[-1] == "simulation_end"
+
+        simulation_end = data["events"][-1]
+        assert simulation_end["content"]["final_step"] == 10
+        assert simulation_end["content"]["status"] == "completed"
+        assert recorder.events[-1].event_type == "simulation_end"
+        assert recorder.events[-1].content["final_step"] == 10
+        assert recorder.events[-1].content["status"] == "completed"
+
     def test_get_stats(self, recorder, mock_model):
         """Test getting recording statistics."""
         # Add some test events
@@ -338,15 +380,31 @@ class TestSimulationRecorder:
         mock_model.max_steps = 10
         mock_model.steps = 5
 
-        recorder.save()
+        recorder.save(filename="checkpoint.json", format="json")
 
         # Check that completion status is "interrupted" since steps < max_steps
         assert recorder.simulation_metadata["completion_status"] == "interrupted"
 
         # Test completed status
         mock_model.steps = 10
-        recorder.save()
+        filepath = recorder.save(filename="final.json", format="json")
         assert recorder.simulation_metadata["completion_status"] == "completed"
+
+        with open(filepath) as f:
+            data = json.load(f)
+
+        event_types = [event["event_type"] for event in data["events"]]
+        assert event_types.count("simulation_end") == 1
+        assert event_types[-1] == "simulation_end"
+
+        simulation_end_events = [
+            event for event in data["events"] if event["event_type"] == "simulation_end"
+        ]
+        assert simulation_end_events[0]["content"]["status"] == "completed"
+        assert simulation_end_events[0]["content"]["final_step"] == 10
+        assert recorder.events[-1].event_type == "simulation_end"
+        assert recorder.events[-1].content["status"] == "completed"
+        assert recorder.events[-1].content["final_step"] == 10
 
     def test_completion_status_without_max_steps(self, recorder, mock_model):
         """Test completion status when max_steps is not available."""

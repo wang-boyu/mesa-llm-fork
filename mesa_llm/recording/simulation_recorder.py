@@ -134,6 +134,15 @@ class SimulationRecorder:
             else:
                 formatted_content = {"data": content}
 
+        # If recording continues after a save/checkpoint, discard the previous
+        # terminal marker so newly recorded events stay chronologically valid.
+        if (
+            event_type != "simulation_end"
+            and self.events
+            and self.events[-1].event_type == "simulation_end"
+        ):
+            self.events.pop()
+
         # Create the event
         event_id = f"{self.simulation_id}_{len(self.events):06d}"
 
@@ -216,6 +225,9 @@ class SimulationRecorder:
 
         filepath = self.output_dir / filename
 
+        if self.events and self.events[-1].event_type == "simulation_end":
+            self.events.pop()
+
         # Update metadata with final state
         self.simulation_metadata.update(
             {
@@ -240,24 +252,31 @@ class SimulationRecorder:
             }
         )
 
-        # Record final model state (only once)
-        if not any(e.event_type == "simulation_end" for e in self.events):
-            self.record_model_event(
-                event_type="simulation_end",
-                content={
-                    "status": (
-                        "unknown"
-                        if getattr(self.model, "max_steps", None) is None
-                        else (
-                            "interrupted"
-                            if self.model.steps < self.model.max_steps
-                            else "completed"
-                        )
-                    ),
-                    "final_step": self.model.steps,
-                    "total_events": len(self.events),
-                },
-            )
+        # Replace the terminal "simulation_end" marker on each save. `save()`
+        # is also used for autosave checkpoints, so the first "simulation_end"
+        # marker must not be frozen forever.
+        simulation_end_event = SimulationEvent(
+            event_id=f"{self.simulation_id}_{len(self.events):06d}",
+            timestamp=datetime.now(UTC),
+            step=self.model.steps,
+            agent_id=None,
+            event_type="simulation_end",
+            content={
+                "status": (
+                    "unknown"
+                    if getattr(self.model, "max_steps", None) is None
+                    else (
+                        "interrupted"
+                        if self.model.steps < self.model.max_steps
+                        else "completed"
+                    )
+                ),
+                "final_step": self.model.steps,
+                "total_events": len(self.events),
+            },
+            metadata={"source": "model"},
+        )
+        self.events.append(simulation_end_event)
 
         # Prepare export data
         export_data = {
