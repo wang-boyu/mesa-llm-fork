@@ -12,12 +12,12 @@ By the end of this tutorial, you will understand:
 - What `LLMAgent` is
 - How Mesa-LLM integrates with Mesa models
 - How agents perform language-based reasoning at each step
-- Why some `reasoning` strategies also suggest actions
+- Why some reasoning strategies also suggest actions
 - How to structure a clean, extensible starting model
 
 ## About Mesa-LLM
 
-[Mesa-LLM](https://github.com/mesa/mesa-llm) is a set of tools that integrates Large Language Models (LLMs) with [Agent-based modeling](https://en.wikipedia.org/wiki/Agent-based_model) using the `Mesa` framework. Agents use natural language to reason about their state and prompts.
+[Mesa-LLM](https://github.com/mesa/mesa-llm) is a set of tools that integrates Large Language Models (LLMs) with [Agent-based modeling](https://en.wikipedia.org/wiki/Agent-based_model) using the Mesa framework. Agents use natural language to reason about their state and prompts.
 
 This approach is particularly useful for exploring how complex or emergent
 behavior can arise from language-driven agents in simulated systems.
@@ -72,7 +72,7 @@ pip install -U -e git+https://github.com/YOUR_FORK/mesa-llm@YOUR_BRANCH#egg=mesa
 ```
 
 ## Building the Model
-After Mesa-LLM is installed, a `model` can be built.
+After Mesa-LLM is installed, a model can be built.
 This tutorial can be followed in a regular Python script or in a [Jupyter](https://jupyter.org/) notebook.
 
 
@@ -98,7 +98,7 @@ We begin by defining a minimal agent that inherits from `LLMAgent`.
 Unlike traditional Mesa agents, `LLMAgent` delegates its reasoning to a language model through a configurable reasoning strategy.
 In this tutorial, we use `ReActReasoning`, which produces both a reasoning trace and a suggested action.
 
-Using the previously imported dependencies, we define the **agent** class:
+Using the previously imported dependencies, we define the agent class:
 ```python
 # ---------------- AGENT ----------------
 class SimpleAgent(LLMAgent):
@@ -132,9 +132,9 @@ class SimpleAgent(LLMAgent):
 ```
 
 ## Create the Model
-The `model` manages agent creation and advances the simulation.
+The model manages agent creation and advances the simulation.
 
-`Agent` are created using the `create_agents()` helper provided by Mesa.
+Agents are created using the `create_agents()` helper provided by Mesa.
 Mesa-LLM integrates with this mechanism by allowing `LLMAgent` to be used
 wherever a standard Mesa `Agent` is expected.
 
@@ -227,8 +227,6 @@ Try the following small exercises to better understand how agent reasoning works
 
 In this tutorial, actions are not executed and are shown only as part of the reasoning
 trace. Later tutorials will introduce environments and action execution.
-
-
 
 
 
