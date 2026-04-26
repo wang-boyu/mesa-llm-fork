@@ -9,6 +9,7 @@ import json
 import logging
 import pickle
 import uuid
+import warnings
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -214,14 +215,17 @@ class SimulationRecorder:
 
         Args:
             filename: Optional filename. If None, auto-generates based on format.
-            format: Save format, either "json" or "pickle".
+            format: Save format, either "json" or deprecated "pickle".
         """
         if format not in ["json", "pickle"]:
             raise ValueError("Format must be 'json' or 'pickle'")
 
         if filename is None:
             extension = "json" if format == "json" else "pkl"
-            filename = f"simulation_{self.simulation_id}_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.{extension}"
+            filename = (
+                f"simulation_{self.simulation_id}_"
+                f"{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.{extension}"
+            )
 
         filepath = self.output_dir / filename
 
@@ -292,11 +296,17 @@ class SimulationRecorder:
             },
         }
 
-        # Save based on format
         if format == "json":
             with open(filepath, "w") as f:
                 json.dump(export_data, f, indent=2, default=str)
-        elif format == "pickle":
+        else:
+            warnings.warn(
+                "Pickle recording support is deprecated and will be removed "
+                "in a future release. Pickle files can execute arbitrary code "
+                "when loaded. Use JSON recordings instead.",
+                FutureWarning,
+                stacklevel=2,
+            )
             with open(filepath, "wb") as f:
                 pickle.dump(export_data, f)
 
