@@ -126,6 +126,20 @@ class ModuleLLM:
             if isinstance(prompt, str):
                 messages.append({"role": "user", "content": prompt})
             elif isinstance(prompt, list):
+                invalid_prompt = next(
+                    (
+                        (index, value)
+                        for index, value in enumerate(prompt)
+                        if not isinstance(value, str)
+                    ),
+                    None,
+                )
+                if invalid_prompt is not None:
+                    index, value = invalid_prompt
+                    raise TypeError(
+                        f"Invalid prompt list element at index {index}: "
+                        f"type '{type(value).__name__}'. Expected str."
+                    )
                 messages.extend([{"role": "user", "content": p} for p in prompt])
             else:
                 raise TypeError(

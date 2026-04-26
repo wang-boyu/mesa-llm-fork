@@ -96,6 +96,10 @@ class TestModuleLLM:
         with pytest.raises(TypeError, match="Invalid prompt type"):
             llm._build_messages(prompt=123)
 
+        # Test _build_messages with non-string list element raises TypeError
+        with pytest.raises(TypeError, match="Invalid prompt list element"):
+            llm._build_messages(prompt=["valid", 123])
+
     def test_model_name_validity(self):
         # Test initialization with invalid model format
 
