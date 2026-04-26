@@ -42,7 +42,7 @@ class AgentViewer:
                 "in a future release. Loading .pkl files can execute "
                 "arbitrary code. Use JSON recordings instead.",
                 FutureWarning,
-                stacklevel=2,
+                stacklevel=3,
             )
             with open(self.recording_path, "rb") as f:
                 return pickle.load(f)  # noqa: S301
