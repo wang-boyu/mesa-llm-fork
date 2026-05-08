@@ -106,7 +106,7 @@ class Reasoning(ABC):
             )
             if tools is not _UNSET:
                 raise ValueError("Use either `tools` or `selected_tools`, not both.")
-            tools = selected_tools
+            tools = _UNSET if selected_tools is None else selected_tools
         return tools
 
     def _get_tools_schema(self, tools: ToolSelection | object = _UNSET) -> list[dict]:

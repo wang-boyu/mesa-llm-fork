@@ -33,6 +33,7 @@ class ReWOOReasoning(Reasoning):
         self.remaining_tool_calls = 0  # Initialize remaining tool calls
         self.current_plan: Plan | None = None
         self.current_obs: Observation | None = None
+        self.current_tools: ToolSelection | object = _UNSET
 
     def get_rewoo_system_prompt(self, obs: Observation) -> str:
         memory = getattr(self.agent, "memory", None)
@@ -150,7 +151,12 @@ class ReWOOReasoning(Reasoning):
             tool_call = [self.current_plan.tool_calls[index_of_tool]]
             current_plan = copy.copy(self.current_plan)
             current_plan.tool_calls = tool_call
-            return Plan(llm_plan=current_plan, step=self.current_obs.step, ttl=ttl)
+            return Plan(
+                llm_plan=current_plan,
+                step=self.current_obs.step,
+                ttl=ttl,
+                tools=self.current_tools,
+            )
 
         # If no prompt is provided, use the agent's default step prompt
         if prompt is None:
@@ -189,6 +195,7 @@ class ReWOOReasoning(Reasoning):
             getattr(rewoo_plan.llm_plan, "tool_calls", None) or []
         )
         self.current_plan = rewoo_plan.llm_plan
+        self.current_tools = tools
 
         return rewoo_plan
 
@@ -228,7 +235,12 @@ class ReWOOReasoning(Reasoning):
             tool_call = [self.current_plan.tool_calls[index_of_tool]]
             current_plan = copy.copy(self.current_plan)
             current_plan.tool_calls = tool_call
-            return Plan(llm_plan=current_plan, step=self.current_obs.step, ttl=ttl)
+            return Plan(
+                llm_plan=current_plan,
+                step=self.current_obs.step,
+                ttl=ttl,
+                tools=self.current_tools,
+            )
 
         # If no prompt is provided, use the agent's default step prompt
         if prompt is None:
@@ -267,5 +279,6 @@ class ReWOOReasoning(Reasoning):
             getattr(rewoo_plan.llm_plan, "tool_calls", None) or []
         )
         self.current_plan = rewoo_plan.llm_plan
+        self.current_tools = tools
 
         return rewoo_plan

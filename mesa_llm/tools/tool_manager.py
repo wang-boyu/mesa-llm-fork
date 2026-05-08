@@ -1,6 +1,7 @@
 import asyncio
 import concurrent.futures
 import contextlib
+import copy
 import inspect
 import json
 import logging
@@ -67,7 +68,7 @@ class ToolManager:
                 DeprecationWarning,
                 stacklevel=2,
             )
-            self.register_many(tuple(extra_tools.values()))
+            self.tools.update(extra_tools)
 
     def register(self, fn: Callable):
         """Register a tool function by name"""
@@ -88,9 +89,16 @@ class ToolManager:
     def _get_tool_schema(self, tool: ToolRef, schema_name: str | None = None) -> dict:
         fn = self._resolve_configured_tool_ref(tool) if isinstance(tool, str) else tool
         schema_name = schema_name or getattr(fn, "__name__", repr(fn))
-        return getattr(fn, "__tool_schema__", None) or {
-            "error": f"Tool {schema_name} missing __tool_schema__"
-        }
+        schema = getattr(fn, "__tool_schema__", None)
+        if schema is None:
+            return {"error": f"Tool {schema_name} missing __tool_schema__"}
+
+        if schema.get("function", {}).get("name") == schema_name:
+            return schema
+
+        aliased_schema = copy.deepcopy(schema)
+        aliased_schema.setdefault("function", {})["name"] = schema_name
+        return aliased_schema
 
     def get_tool_schema(self, fn: Callable, schema_name: str | None = None) -> dict:
         """Deprecated compatibility alias for the private single-tool helper."""
@@ -148,15 +156,22 @@ class ToolManager:
 
     def _resolve_configured_tool_ref(self, tool_ref: ToolRef) -> Callable:
         """Resolve per-call tool selectors against configured tools only."""
+        return self._resolve_configured_tool_item(tool_ref)[1]
+
+    def _resolve_configured_tool_item(self, tool_ref: ToolRef) -> tuple[str, Callable]:
+        """Resolve a per-call selector while preserving configured tool names."""
         if isinstance(tool_ref, str):
             if tool_ref in self.tools:
-                return self.tools[tool_ref]
+                return tool_ref, self.tools[tool_ref]
             raise self._unknown_tool_error(tool_ref)
 
         if callable(tool_ref):
             tool_name = getattr(tool_ref, "__name__", repr(tool_ref))
             if tool_name in self.tools and self.tools[tool_name] is tool_ref:
-                return self.tools[tool_name]
+                return tool_name, self.tools[tool_name]
+            for configured_name, configured_fn in self.tools.items():
+                if configured_fn is tool_ref:
+                    return configured_name, configured_fn
             raise self._unknown_tool_error(tool_name)
 
         raise self._invalid_tool_ref_error(tool_ref)
@@ -177,6 +192,12 @@ class ToolManager:
             for tool_ref in self._normalize_tool_selection(tools)
         ]
 
+    def _resolve_tool_items(self, tools: ToolSelection) -> list[tuple[str, Callable]]:
+        return [
+            self._resolve_configured_tool_item(tool_ref)
+            for tool_ref in self._normalize_tool_selection(tools)
+        ]
+
     def _get_tool_execution_map(
         self,
         tools: ToolSelection | object = _UNSET,
@@ -185,7 +206,7 @@ class ToolManager:
             return self.tools
         if tools is None:
             return {}
-        return {fn.__name__: fn for fn in self._resolve_tool_refs(tools)}
+        return dict(self._resolve_tool_items(tools))
 
     def get_tools_schema(
         self,
@@ -207,16 +228,18 @@ class ToolManager:
             )
             if tools is not _UNSET:
                 raise ValueError("Use either `tools` or `selected_tools`, not both.")
-            tools = selected_tools
+            tools = _UNSET if selected_tools is None else selected_tools
 
         if tools is _UNSET:
-            selected_fns = list(self.tools.values())
+            selected_items = list(self.tools.items())
         elif tools is None:
-            selected_fns = []
+            selected_items = []
         else:
-            selected_fns = self._resolve_tool_refs(tools)
+            selected_items = self._resolve_tool_items(tools)
 
-        return [self._get_tool_schema(fn) for fn in selected_fns]
+        return [
+            self._get_tool_schema(fn, schema_name=name) for name, fn in selected_items
+        ]
 
     def get_all_tools_schema(
         self,
@@ -232,7 +255,9 @@ class ToolManager:
         if selected_tools is not _UNSET:
             if tools is not _UNSET:
                 raise ValueError("Use either `tools` or `selected_tools`, not both.")
-            tools = selected_tools
+            tools = _UNSET if selected_tools is None else selected_tools
+        elif tools is None:
+            tools = _UNSET
         return self.get_tools_schema(tools=tools)
 
     def call(self, name: str, arguments: dict) -> str:

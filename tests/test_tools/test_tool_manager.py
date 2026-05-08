@@ -204,9 +204,30 @@ class TestToolManager:
             },
         }
 
-        extra_tools = {"extra_tool": extra_tool}
-        manager = ToolManager(extra_tools=extra_tools)
-        assert "extra_tool" in manager.tools
+        extra_tools = {"alias_name": extra_tool}
+        with pytest.warns(DeprecationWarning, match="extra_tools"):
+            manager = ToolManager(extra_tools=extra_tools)
+
+        assert "alias_name" in manager.tools
+        assert "extra_tool" not in manager.tools
+
+        schemas = manager.get_tools_schema()
+        selected_schemas = manager.get_tools_schema(tools="alias_name")
+        callable_schemas = manager.get_tools_schema(tools=extra_tool)
+        assert schemas[0]["function"]["name"] == "alias_name"
+        assert selected_schemas[0]["function"]["name"] == "alias_name"
+        assert callable_schemas[0]["function"]["name"] == "alias_name"
+
+        mock_tool_call = Mock()
+        mock_tool_call.id = "call_alias"
+        mock_tool_call.function.name = "alias_name"
+        mock_tool_call.function.arguments = '{"x": 4}'
+        mock_response = Mock()
+        mock_response.tool_calls = [mock_tool_call]
+
+        result = manager.call_tools(Mock(), mock_response, tools="alias_name")
+        assert result[0]["name"] == "alias_name"
+        assert result[0]["response"] == "4"
 
     def test_register_tool(self):
         """Test registering a tool manually."""
@@ -341,6 +362,41 @@ class TestToolManager:
 
         assert len(schemas) == 1
         assert schemas[0]["function"]["name"] == "alias_tool"
+
+    def test_deprecated_schema_aliases_none_inherits_configured_tools(self):
+        """Deprecated None selectors keep old all-configured semantics."""
+
+        @tool
+        def compatibility_tool(agent, x: int) -> int:
+            """Compatibility tool.
+            Args:
+                agent: The agent making the request (provided automatically)
+                x: Input.
+            Returns:
+                Output.
+            """
+            return x
+
+        manager = ToolManager(tools=[compatibility_tool])
+
+        assert manager.get_tools_schema(tools=None) == []
+
+        with pytest.warns(DeprecationWarning, match="get_all_tools_schema"):
+            positional_none_schemas = manager.get_all_tools_schema(None)
+
+        with pytest.warns(DeprecationWarning, match="get_all_tools_schema"):
+            selected_none_schemas = manager.get_all_tools_schema(selected_tools=None)
+
+        with pytest.warns(DeprecationWarning, match="selected_tools"):
+            selected_alias_schemas = manager.get_tools_schema(selected_tools=None)
+
+        for schemas in (
+            positional_none_schemas,
+            selected_none_schemas,
+            selected_alias_schemas,
+        ):
+            assert len(schemas) == 1
+            assert schemas[0]["function"]["name"] == "compatibility_tool"
 
     def test_get_tools_schema_with_selected_tools(self):
         """Test getting schemas for selected tools only."""

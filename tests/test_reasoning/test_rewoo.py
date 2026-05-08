@@ -242,6 +242,43 @@ class TestReWOOReasoning:
         assert isinstance(result, Plan)
         mock_agent.tool_manager.get_tools_schema.assert_called_with(tools=tools)
 
+    def test_plan_preserves_tools_for_remaining_tool_calls(
+        self, llm_response_factory, mock_agent
+    ):
+        """ReWOO continuation plans keep the original narrowed tool selection."""
+        mock_agent.step_prompt = "Default step prompt"
+        mock_agent.generate_obs.return_value = Observation(
+            step=1, self_state={}, local_state={}
+        )
+        mock_agent.memory = Mock()
+        mock_agent.memory.format_long_term.return_value = "Long term memory"
+        mock_agent.memory.format_short_term.return_value = "Short term memory"
+        mock_agent.memory.add_to_memory = Mock()
+        mock_agent.llm = Mock()
+        mock_agent.tool_manager = Mock()
+        mock_agent.tool_manager.get_tools_schema.return_value = {}
+
+        mock_plan_response = llm_response_factory(content="Test plan content")
+        mock_exec_response = llm_response_factory(
+            content="Execution plan",
+            tool_calls=[_tool_call("call_1"), _tool_call("call_2")],
+        )
+        mock_agent.llm.generate.side_effect = [mock_plan_response, mock_exec_response]
+
+        reasoning = ReWOOReasoning(mock_agent)
+        reasoning.execute_tool_call = Mock(
+            return_value=Plan(step=1, llm_plan=mock_exec_response.choices[0].message)
+        )
+
+        tools = ["tool1"]
+        reasoning.plan(tools=tools)
+        continuation = reasoning.plan()
+
+        assert continuation.tools == tools
+        assert continuation.llm_plan.tool_calls == [
+            mock_exec_response.choices[0].message.tool_calls[0]
+        ]
+
     def test_plan_uses_scoped_system_prompt(self, llm_response_factory, mock_agent):
         """ReWOO plan should pass system prompt per call and not mutate llm state."""
         mock_agent.step_prompt = "Default step prompt"
@@ -544,6 +581,45 @@ class TestReWOOReasoning:
 
         assert isinstance(result, Plan)
         mock_agent.tool_manager.get_tools_schema.assert_called_with(tools=tools)
+
+    def test_aplan_preserves_tools_for_remaining_tool_calls(
+        self, llm_response_factory, mock_agent
+    ):
+        """Async ReWOO continuation plans keep the original narrowed tools."""
+        mock_agent.agenerate_obs = AsyncMock(
+            return_value=Observation(step=1, self_state={}, local_state={})
+        )
+        mock_agent.memory = Mock()
+        mock_agent.memory.format_long_term.return_value = "Long term memory"
+        mock_agent.memory.format_short_term.return_value = "Short term memory"
+        mock_agent.memory.add_to_memory = Mock()
+        mock_agent.memory.aadd_to_memory = AsyncMock()
+        mock_agent.llm = Mock()
+        mock_agent.tool_manager = Mock()
+        mock_agent.tool_manager.get_tools_schema.return_value = {}
+
+        mock_plan_response = llm_response_factory(content="Async plan content")
+        mock_exec_response = llm_response_factory(
+            content="Async execution plan",
+            tool_calls=[_tool_call("call_1"), _tool_call("call_2")],
+        )
+        mock_agent.llm.agenerate = AsyncMock(
+            side_effect=[mock_plan_response, mock_exec_response]
+        )
+
+        reasoning = ReWOOReasoning(mock_agent)
+        reasoning.aexecute_tool_call = AsyncMock(
+            return_value=Plan(step=1, llm_plan=mock_exec_response.choices[0].message)
+        )
+
+        tools = ["tool1"]
+        asyncio.run(reasoning.aplan("test prompt", tools=tools))
+        continuation = asyncio.run(reasoning.aplan("test prompt"))
+
+        assert continuation.tools == tools
+        assert continuation.llm_plan.tool_calls == [
+            mock_exec_response.choices[0].message.tool_calls[0]
+        ]
 
     def test_aplan_uses_scoped_system_prompt(self, llm_response_factory, mock_agent):
         """Async ReWOO plan should pass system prompt per call and not mutate llm state."""

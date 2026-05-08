@@ -331,6 +331,17 @@ class TestReasoningBase:
             "alias_reasoning_tool"
         ]
 
+        with pytest.warns(DeprecationWarning, match="selected_tools"):
+            reasoning.execute_tool_call(
+                "alias none inherits",
+                selected_tools=None,
+            )
+
+        schemas = mock_agent.llm.generate.call_args.kwargs["tool_schema"]
+        assert [schema["function"]["name"] for schema in schemas] == [
+            "alias_reasoning_tool"
+        ]
+
     def test_execute_tool_call_rejects_unconfigured_per_call_tools(self, mock_agent):
         """Per-call tools narrow configured tools and cannot inject tools."""
 
